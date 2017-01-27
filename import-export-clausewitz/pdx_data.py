@@ -69,6 +69,7 @@ class PdxFile():
 
         upperBound = buffer.GetCurrentOffset()
 
+        if name == "pdxasset":
             asset = PdxAsset()
             asset.bounds = (lowerBound, upperBound)
             self.nodes.append(asset)
