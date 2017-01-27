@@ -21,6 +21,26 @@
     <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
     <PtvsTargetsFile>$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets</PtvsTargetsFile>
   </PropertyGroup>
+  <ItemGroup>
+    <Folder Include="import-export-clausewitz\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="import-export-clausewitz\importer.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="import-export-clausewitz\pdx_data.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="import-export-clausewitz\tree.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="import-export-clausewitz\utils.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="import-export-clausewitz\__init__.py">
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
   <Import Project="$(PtvsTargetsFile)" Condition="Exists($(PtvsTargetsFile))" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" Condition="!Exists($(PtvsTargetsFile))" />
 </Project>
