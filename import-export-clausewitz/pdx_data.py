@@ -35,6 +35,7 @@ class PdxFile():
         stringType = 1
         propertyData = []
 
+        lowerBound = buffer.GetCurrentOffset()
         nameLength = buffer.NextInt8()
 
         for i in range(1, nameLength + 1):
@@ -66,6 +67,12 @@ class PdxFile():
         newNode = tree.TreeNode(name)
         newNode.value = propertyData
 
+        upperBound = buffer.GetCurrentOffset()
+
+            asset = PdxAsset()
+            asset.bounds = (lowerBound, upperBound)
+            self.nodes.append(asset)
+
         treeNode.append(newNode)
 
     def ReadObject(self, treeNode: tree.TreeNode, buffer: utils.BufferReader, depth):
@@ -77,7 +84,7 @@ class PdxFile():
             char = buffer.NextChar()
         
         node = treeNode
-
+            
         if depth >= 0:
             objectName = char + utils.ReadNullByteString(buffer)
 
