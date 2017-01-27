@@ -92,9 +92,10 @@ class PdxFileImporter:
         locatorNode = meshNode.search("locator", False)
         
         locators = locatorNode.subNodes[0].Flatten()
-
+         
         for i in range(0, len(locators)):
             o = bpy.data.objects.new(locators[i].name, None)
+            o.parent = obj
             bpy.context.scene.objects.link(o)
             o.empty_draw_size = 2
             o.empty_draw_type = 'PLAIN_AXES'
