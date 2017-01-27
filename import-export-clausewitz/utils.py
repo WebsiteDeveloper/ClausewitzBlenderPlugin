@@ -3,30 +3,44 @@ import struct
 class BufferReader:
     def __init__(self, buffer):
         self.buffer = buffer
-        self.offset = 0
+        self.__offset__ = 0
 
     def IsEOF(self):
-        return (self.offset >= len(self.buffer))
+        return (self.__offset__ >= len(self.buffer))
 
     def NextInt8(self):
-        self.offset += 1
-        return self.buffer[self.offset - 1]
+        self.__offset__ += 1
+        return self.buffer[self.__offset__ - 1]
 
     def NextInt32(self):
-        self.offset += 4
-        return struct.unpack_from("i", self.buffer, self.offset - 4)[0]
+        self.__offset__ += 4
+        return struct.unpack_from("i", self.buffer, self.__offset__ - 4)[0]
 
     def NextUInt32(self):
-        self.offset += 4
-        return struct.unpack_from("I", self.buffer, self.offset - 4)[0]
+        self.__offset__ += 4
+        return struct.unpack_from("I", self.buffer, self.__offset__ - 4)[0]
 
     def NextFloat32(self):
-        self.offset += 4
-        return struct.unpack_from("f", self.buffer, self.offset - 4)[0]
+        self.__offset__ += 4
+        return struct.unpack_from("f", self.buffer, self.__offset__ - 4)[0]
 
     def NextChar(self):
-        self.offset += 1
-        return chr(self.buffer[self.offset - 1])
+        self.__offset__ += 1
+        return chr(self.buffer[self.__offset__ - 1])
+
+    def GetCurrentOffset(self):
+        return self.__offset__
+
+def ReadNullByteString(buffer: BufferReader):
+    stringValue = ""
+        
+    char = buffer.NextChar()
+        
+    while char != "\x00":
+        stringValue += char
+        char = buffer.NextChar()
+
+    return stringValue
 
 def my_range(start, end, step):
     while start <= end:

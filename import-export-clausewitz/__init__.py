@@ -38,7 +38,6 @@ class ClausewitzImporter(Operator, ImportHelper):
 
     def execute(self, context):
         pdx = importer.PdxFileImporter(self.filepath)
-        pdx.ReadFile()
         pdx.AddBlenderMesh()
 
         return {'FINISHED'}      

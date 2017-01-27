@@ -7,19 +7,19 @@ from . import (pdx_data, tree, utils)
 
 class PdxFileImporter:
     def __init__(self, filename):
-        self.filename = filename
-        self.dataTree = tree.Tree(tree.TreeNode("root"))
+        self.file = pdx_data.PdxFile(filename)
+        self.file.read()
 
     def AddBlenderMesh(self):
-        meshNode = self.dataTree.search("mesh")
+        meshNode = self.file.dataTree.search("mesh")
 
         if not meshNode.hasSubNode("uv_map"):
             meshNode = meshNode.search("mesh", False)
 
-        if self.filename.find("/") != -1:
-            meshName = self.filename.rsplit("/", 1)[1].replace(".mesh", "")  #self.dataTree.rootNode.searchForParentNode(meshNode.id).name
-        elif self.filename.find("\\") != -1:
-            meshName = self.filename.rsplit("\\", 1)[1].replace(".mesh", "")  #self.dataTree.rootNode.searchForParentNode(meshNode.id).name
+        if self.file.filename.find("/") != -1:
+            meshName = self.file.filename.rsplit("/", 1)[1].replace(".mesh", "")  #self.dataTree.rootNode.searchForParentNode(meshNode.id).name
+        elif self.file.filename.find("\\") != -1:
+            meshName = self.file.filename.rsplit("\\", 1)[1].replace(".mesh", "")  #self.dataTree.rootNode.searchForParentNode(meshNode.id).name
         else:
             meshName = "ClausewitzMesh"
 
@@ -61,9 +61,9 @@ class PdxFileImporter:
         tex = bpy.data.textures.new(meshName + "_text", 'IMAGE')
         tex.type = 'IMAGE'
 
-        imageFile = Path(os.path.join(os.path.dirname(self.filename), meshNode.search("diff", False).value[0]))
+        imageFile = Path(os.path.join(os.path.dirname(self.file.filename), meshNode.search("diff", False).value[0]))
 
-        altImageFile = Path(os.path.join(os.path.dirname(self.filename), meshName + "_diffuse.dds"))
+        altImageFile = Path(os.path.join(os.path.dirname(self.file.filename), meshName + "_diffuse.dds"))
         
         if imageFile.is_file():
             imageFile.resolve()
@@ -100,96 +100,3 @@ class PdxFileImporter:
             o.empty_draw_size = 2
             o.empty_draw_type = 'PLAIN_AXES'
             o.location = (locators[i].subNodes[0].value[0], locators[i].subNodes[0].value[1], locators[i].subNodes[0].value[2])
-
-    def ReadFile(self):
-        offset = 0
-        meshFile = io.open(self.filename, "rb")
-        rawData = meshFile.read()
-
-        # Remove File Identifier
-        data = rawData.lstrip(b"@@b@")
-
-        buffer = utils.BufferReader(data)
-
-        rootNode = tree.TreeNode("root")
-
-        self.dataTree = tree.Tree(rootNode)
-        self.ReadObject(rootNode, buffer, -1)
-
-        self.dataTree.print()
-        meshFile.close()
-
-    def ReadProperty(self, treeNode: tree.TreeNode, buffer: utils.BufferReader):
-        name = ""
-        dataCount = 0
-        stringType = 1
-        propertyData = []
-
-        nameLength = buffer.NextInt8()
-
-        for i in range(1, nameLength + 1):
-            name += buffer.NextChar()
-
-        name = utils.TranslatePropertyName(name)
-
-        char = buffer.NextChar()
-
-        if char == "i":
-            dataCount = buffer.NextUInt32()
-
-            for i in range(0, dataCount):
-                propertyData.append(buffer.NextInt32())
-        elif char == "f":
-            dataCount = buffer.NextUInt32()
-
-            for i in range(0, dataCount):
-                propertyData.append(buffer.NextFloat32())
-        elif char == "s":
-            stringValue = ""
-            stringType = buffer.NextUInt32()
-            dataCount = buffer.NextUInt32()
-
-            stringValue = self.ReadNullByteString(buffer)
-
-            propertyData.append(stringValue)
-
-        newNode = tree.TreeNode(name)
-        newNode.value = propertyData
-
-        treeNode.append(newNode)
-
-    def ReadObject(self, treeNode: tree.TreeNode, buffer: utils.BufferReader, depth):
-        objectName = ""
-        char = buffer.NextChar()
-
-        while not buffer.IsEOF() and char == '[':
-            depth += 1
-            char = buffer.NextChar()
-        
-        node = treeNode
-
-        if depth >= 0:
-            objectName = char + self.ReadNullByteString(buffer)
-
-            node = tree.TreeNode(objectName)
-            treeNode.append(node)
-            
-        while not buffer.IsEOF():
-            if char == "!":
-                self.ReadProperty(node, buffer)
-            elif char == "[":
-                self.ReadObject(node, buffer, depth + 1)
-
-            if not buffer.IsEOF():
-                char = buffer.NextChar()
-
-    def ReadNullByteString(self, buffer: utils.BufferReader):
-        stringValue = ""
-        
-        char = buffer.NextChar()
-        
-        while char != "\x00":
-            stringValue += char
-            char = buffer.NextChar()
-
-        return stringValue
