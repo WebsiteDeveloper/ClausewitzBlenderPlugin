@@ -2,6 +2,7 @@ import bpy
 from bpy_types import (Operator)
 from bpy_extras.io_utils import (ImportHelper)
 from bpy.props import (StringProperty, BoolProperty, EnumProperty)
+from . import (importer)
 
 bl_info = {
     "name": "Clausewitz Import/Export",
@@ -19,8 +20,8 @@ class ClausewitzExporter(Operator):
     bl_idname = "clausewitz.exporter"
     bl_label = "Export .mesh (Clausewitz Engine)"
 
-    def execute(self, context):       
-        return {'FINISHED'}            
+    def execute(self, context):
+        return {'FINISHED'}        
 
 class ClausewitzImporter(Operator, ImportHelper):
     """Clausewitz Importer"""
@@ -36,9 +37,9 @@ class ClausewitzImporter(Operator, ImportHelper):
             )
 
     def execute(self, context):
-        #pdx = PdxFile(self.filepath)
-        #pdx.ReadFile()
-        #pdx.AddBlenderMesh()
+        pdx = importer.PdxFileImporter(self.filepath)
+        pdx.ReadFile()
+        pdx.AddBlenderMesh()
 
         return {'FINISHED'}      
 
