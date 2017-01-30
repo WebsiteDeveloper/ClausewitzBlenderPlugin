@@ -2,43 +2,59 @@ import io
 from . import (tree, utils)
 
 class PdxFile():
+    """Class representing a Paradox Clausewitz Engine .mesh File."""
     def __init__(self, filename):
         self.filename = filename
-        self.fileReference = None
+        self.__file_reference__ = None
         self.rawData = []
         self.nodes = []
-        self.dataTree = tree.Tree(tree.TreeNode("root"))
 
     def read(self):
-        self.fileReference = io.open(self.filename, "rb")
-        self.rawData = self.fileReference.read()
+        """Read and Parse the specified File."""
+        self.__file_reference__ = io.open(self.filename, "rb")
+        self.rawData = self.__file_reference__.read()
 
         self.__parse__()
 
     def __parse__(self):
-        offset = 0
-
         data = self.rawData.lstrip(b"@@b@")
 
         buffer = utils.BufferReader(data)
-        rootNode = tree.TreeNode("root")
 
-        self.dataTree = tree.Tree(rootNode)
-        self.ReadObject(rootNode, buffer, -1)
+        while not buffer.IsEOF():
+            char = buffer.NextChar()
 
-        self.dataTree.print()
-        self.fileReference.close()
+            if char == "!":
+                self.nodes.append(self.read_property(buffer))
+            elif char == "[":
+                self.nodes.append(self.read_object(buffer, 1))
 
-    def ReadProperty(self, treeNode: tree.TreeNode, buffer: utils.BufferReader):
+        #self.dataTree = tree.Tree(rootNode)
+        #self.ReadObject(rootNode, buffer, -1)
+
+        #self.dataTree.print()
+        print(self.nodes)
+
+        for i in range(1, len(self.nodes)):
+            try:
+                print(self.nodes[i].name)
+                print(self.nodes[i].properties)
+                print(self.nodes[i].depth)
+            finally:
+                pass
+
+        self.__file_reference__.close()
+
+    def read_property(self, buffer: utils.BufferReader):
+        """Read a .mesh Property using the provided Buffer"""
         name = ""
-        dataCount = 0
-        stringType = 1
-        propertyData = []
+        property_data = []
 
-        lowerBound = buffer.GetCurrentOffset()
-        nameLength = buffer.NextInt8()
+        lower_bound = buffer.GetCurrentOffset()
 
-        for i in range(1, nameLength + 1):
+        name_length = buffer.NextInt8()
+
+        for i in range(0, name_length):
             name += buffer.NextChar()
 
         name = utils.TranslatePropertyName(name)
@@ -46,64 +62,60 @@ class PdxFile():
         char = buffer.NextChar()
 
         if char == "i":
-            dataCount = buffer.NextUInt32()
+            data_count = buffer.NextUInt32()
 
-            for i in range(0, dataCount):
-                propertyData.append(buffer.NextInt32())
+            for i in range(0, data_count):
+                property_data.append(buffer.NextInt32())
         elif char == "f":
-            dataCount = buffer.NextUInt32()
+            data_count = buffer.NextUInt32()
 
-            for i in range(0, dataCount):
-                propertyData.append(buffer.NextFloat32())
+            for i in range(0, data_count):
+                property_data.append(buffer.NextFloat32())
         elif char == "s":
-            stringValue = ""
+            value = ""
             stringType = buffer.NextUInt32()
             dataCount = buffer.NextUInt32()
 
-            stringValue = utils.ReadNullByteString(buffer)
+            value = utils.ReadNullByteString(buffer)
 
-            propertyData.append(stringValue)
+            property_data = value
 
-        newNode = tree.TreeNode(name)
-        newNode.value = propertyData
-
-        upperBound = buffer.GetCurrentOffset()
+        upper_bound = buffer.GetCurrentOffset()
 
         if name == "pdxasset":
-            asset = PdxAsset()
-            asset.bounds = (lowerBound, upperBound)
-            self.nodes.append(asset)
+            result = PdxAsset()
+            result.bounds = (lower_bound, upper_bound)
+        else:
+            result = PdxProperty(name, (lower_bound, upper_bound))
+            result.value = property_data
 
-        treeNode.append(newNode)
+        return result
 
-    def ReadObject(self, treeNode: tree.TreeNode, buffer: utils.BufferReader, depth):
-        objectName = ""
+    def read_object(self, buffer: utils.BufferReader, depth):
+        """Reads object Data"""
         char = buffer.NextChar()
+        object_properties = []
 
-        while not buffer.IsEOF() and char == '[':
-            depth += 1
-            char = buffer.NextChar()
-        
-        node = treeNode
-            
-        if depth >= 0:
-            objectName = char + utils.ReadNullByteString(buffer)
+        if char == "[":
+            return self.read_object(buffer, depth + 1)
+        else:
+            object_name = char + utils.ReadNullByteString(buffer)
 
-            node = tree.TreeNode(objectName)
-            treeNode.append(node)
-            
-        while not buffer.IsEOF():
-            if char == "!":
-                self.ReadProperty(node, buffer)
-            elif char == "[":
-                self.ReadObject(node, buffer, depth + 1)
+            while not buffer.IsEOF():
+                char = buffer.NextChar(True)
 
-            if not buffer.IsEOF():
-                char = buffer.NextChar()
+                if char == "!":
+                    buffer.NextChar()
+                    object_properties.append(self.read_property(buffer))
+                elif char == "[":
+                    break
+
+            return PdxObject(object_name, object_properties, depth)
 
 class PdxAsset():
     def __init__(self):
         self.bounds = (0,0)
+        self.name = "pdxasset"
         self.value = 0
 
 class PdxMesh():
@@ -120,7 +132,21 @@ class PdxMesh():
         self.uv_coords = []
         self.material = None
 
-class Locator():
+class PdxProperty():
+    """Temporary class to hold the Values of a parsed Property until it gets mapped to the object"""
+    def __init__(self, name, bounds):
+        self.name = name
+        self.bounds = bounds
+        self.value = []
+
+class PdxObject():
+    """Temporary object"""
+    def __init__(self, name, properties, depth):
+        self.name = name
+        self.properties = properties
+        self.depth = depth
+
+class PdxLocator():
     def __init__(self, name, pos):
         self.bounds = (0,0)
         self.name = name
