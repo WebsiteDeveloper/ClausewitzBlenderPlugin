@@ -46,6 +46,19 @@ class BufferReader:
     def GetCurrentOffset(self):
         return self.__offset__
 
+    def SetCurrentOffset(self, offset):
+        self.__offset__ = offset
+
+def PreviewObjectDepth(buffer: BufferReader, startDepth=1):
+    offsetTemp = buffer.GetCurrentOffset()
+
+    while buffer.NextChar() == "[":
+        startDepth += 1
+
+    buffer.SetCurrentOffset(offsetTemp)
+
+    return startDepth
+
 def ReadNullByteString(buffer: BufferReader):
     stringValue = ""
         

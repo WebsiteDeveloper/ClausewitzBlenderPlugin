@@ -27,7 +27,7 @@ class PdxFile():
             if char == "!":
                 self.nodes.append(self.read_property(buffer))
             elif char == "[":
-                self.nodes.append(self.read_object(buffer, 1))
+                self.nodes.append(self.read_object(buffer, 0))
 
         #self.dataTree = tree.Tree(rootNode)
         #self.ReadObject(rootNode, buffer, -1)
@@ -35,11 +35,11 @@ class PdxFile():
         #self.dataTree.print()
         print(self.nodes)
 
-        for i in range(1, len(self.nodes)):
+        for i in range(0, len(self.nodes[1].properties)):
             try:
-                print(self.nodes[i].name)
-                print(self.nodes[i].properties)
-                print(self.nodes[i].depth)
+                print(self.nodes[1].properties[i].name)
+                print(self.nodes[1].properties[i].properties)
+                print(self.nodes[1].properties[i].depth)
             finally:
                 pass
 
@@ -108,7 +108,10 @@ class PdxFile():
                     buffer.NextChar()
                     object_properties.append(self.read_property(buffer))
                 elif char == "[":
-                    break
+                    if depth < utils.PreviewObjectDepth(buffer):
+                        object_properties.append(self.read_object(buffer, 0))
+                    else:
+                        break
 
             return PdxObject(object_name, object_properties, depth)
 
