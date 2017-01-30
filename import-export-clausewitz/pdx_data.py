@@ -27,21 +27,9 @@ class PdxFile():
             if char == "!":
                 self.nodes.append(self.read_property(buffer))
             elif char == "[":
-                self.nodes.append(self.read_object(buffer, 0))
+                self.nodes.append(self.read_object(buffer, 0, None))
 
-        #self.dataTree = tree.Tree(rootNode)
-        #self.ReadObject(rootNode, buffer, -1)
-
-        #self.dataTree.print()
-        print(self.nodes)
-
-        for i in range(0, len(self.nodes[1].properties)):
-            try:
-                print(self.nodes[1].properties[i].name)
-                print(self.nodes[1].properties[i].properties)
-                print(self.nodes[1].properties[i].depth)
-            finally:
-                pass
+        print("Parsed")
 
         self.__file_reference__.close()
 
@@ -91,15 +79,25 @@ class PdxFile():
 
         return result
 
-    def read_object(self, buffer: utils.BufferReader, depth):
+    def read_object(self, buffer: utils.BufferReader, depth, prev_obj):
         """Reads object Data"""
         char = buffer.NextChar()
         object_properties = []
+        sub_objects = []
 
         if char == "[":
-            return self.read_object(buffer, depth + 1)
+            return self.read_object(buffer, depth + 1, prev_obj)
         else:
             object_name = char + utils.ReadNullByteString(buffer)
+
+            if object_name == "object":
+                result = PdxWorld(sub_objects)
+            elif object_name == "mesh":
+                result = PdxMesh()
+            elif object_name == "locator":
+                result = PdxLocators()
+            else:
+                result = PdxObject(object_name, [], depth)
 
             while not buffer.IsEOF():
                 char = buffer.NextChar(True)
@@ -109,11 +107,33 @@ class PdxFile():
                     object_properties.append(self.read_property(buffer))
                 elif char == "[":
                     if depth < utils.PreviewObjectDepth(buffer):
-                        object_properties.append(self.read_object(buffer, 0))
+                        sub_objects.append(self.read_object(buffer, 0, result))
                     else:
                         break
 
-            return PdxObject(object_name, object_properties, depth)
+            if object_name == "object":
+                result = PdxWorld(sub_objects)
+            elif object_name == "mesh":
+                result = PdxMesh()
+                result.verts = object_properties[0].value
+                result.faces = object_properties[4].value
+                result.normals = object_properties[1].value
+                result.tangents = object_properties[2].value
+                result.uv_coords = object_properties[3].value
+                result.bounds = sub_objects[0]
+                #result.material = sub_objects[1]
+            elif object_name == "locator":
+                result = PdxLocators()
+                result.locators = sub_objects
+            else:
+                if isinstance(prev_obj, PdxLocators):
+                    result = PdxLocator(object_name, object_properties[0].value)
+                elif isinstance(prev_obj, PdxWorld) and object_name.endswith("MeshShape"):
+                    result = PdxShape(object_name, sub_objects[0])
+                else:
+                    result = PdxObject(object_name, object_properties, depth)
+
+            return result
 
 class PdxAsset():
     def __init__(self):
@@ -122,11 +142,8 @@ class PdxAsset():
         self.value = 0
 
 class PdxMesh():
-    def __init__(self, name, blenderName):
+    def __init__(self):
         self.bounds = (0,0)
-        self.name = name
-        self.blenderName = blenderName
-        self.blenderMesh = None
         self.verts = []
         self.faces = []
         self.tangents = []
@@ -142,12 +159,26 @@ class PdxProperty():
         self.bounds = bounds
         self.value = []
 
+class PdxWorld():
+    def __init__(self, objects):
+        self.objects = objects
+
+class PdxShape():
+    def __init__(self, name, mesh):
+        self.name = name
+        self.mesh = mesh
+
 class PdxObject():
     """Temporary object"""
     def __init__(self, name, properties, depth):
         self.name = name
         self.properties = properties
         self.depth = depth
+
+class PdxLocators():
+    def __init__(self):
+        self.bounds = (0,0)
+        self.locators = []
 
 class PdxLocator():
     def __init__(self, name, pos):
