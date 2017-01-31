@@ -107,13 +107,18 @@ class PdxFile():
                     object_properties.append(self.read_property(buffer))
                 elif char == "[":
                     if depth < utils.PreviewObjectDepth(buffer):
-                        sub_objects.append(self.read_object(buffer, 0, result))
+                        if isinstance(prev_obj, PdxLocators):
+                            sub_objects.append(self.read_object(buffer, 0, prev_obj))
+                        else:
+                            sub_objects.append(self.read_object(buffer, 0, result))
                     else:
                         break
 
             if object_name == "object":
+                print("World")
                 result = PdxWorld(sub_objects)
             elif object_name == "mesh":
+                print("Mesh")
                 result = PdxMesh()
                 result.verts = object_properties[0].value
                 result.faces = object_properties[4].value
@@ -123,13 +128,25 @@ class PdxFile():
                 result.bounds = sub_objects[0]
                 #result.material = sub_objects[1]
             elif object_name == "locator":
+                print("Locators")
                 result = PdxLocators()
                 result.locators = sub_objects
+            elif object_name == "aabb":
+                print("Bounds")
+                result = PdxBounds(object_properties[0].value, object_properties[1].value)
+            elif object_name == "material":
+                result = PdxMaterial()
+                result.shaders = object_properties[0].value
+                result.diffs = object_properties[1].value
+                result.normals = object_properties[2].value
+                result.specs = object_properties[3].value
             else:
                 if isinstance(prev_obj, PdxLocators):
+                    print("Locator")
                     result = PdxLocator(object_name, object_properties[0].value)
                 elif isinstance(prev_obj, PdxWorld) and object_name.endswith("MeshShape"):
                     result = PdxShape(object_name, sub_objects[0])
+                    print("Shape")
                 else:
                     result = PdxObject(object_name, object_properties, depth)
 
@@ -148,9 +165,15 @@ class PdxMesh():
         self.faces = []
         self.tangents = []
         self.normals = []
-        self.locators = []
         self.uv_coords = []
         self.material = None
+
+class PdxMaterial():
+    def __init__(self):
+        self.shaders = ""
+        self.diffs = ""
+        self.normals = ""
+        self.specs = ""
 
 class PdxProperty():
     """Temporary class to hold the Values of a parsed Property until it gets mapped to the object"""
@@ -167,6 +190,11 @@ class PdxShape():
     def __init__(self, name, mesh):
         self.name = name
         self.mesh = mesh
+
+class PdxBounds():
+    def __init__(self, min, max):
+        self.min = min
+        self.max = max
 
 class PdxObject():
     """Temporary object"""
