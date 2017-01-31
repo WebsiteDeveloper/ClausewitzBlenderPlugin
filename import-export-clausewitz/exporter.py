@@ -16,7 +16,7 @@ class PdxFileExporter:
         
         world = pdx_data.PdxWorld([])
         shape = pdx_data.PdxShape(name)
-        
+
         mesh = pdx_data.PdxMesh()
         shape.mesh = mesh
 
@@ -34,4 +34,25 @@ class PdxFileExporter:
 
         mesh.verts = verts
 
+
+        locators_array = []
+
+        for i in range(0, len(bpy.data.objects)):
+            if bpy.data.objects[i].type == 'EMPTY':
+                temp = pdx_data.PdxLocator(bpy.data.objects[i].name, bpy.data.objects[i].location)
+                locators_array.append(temp)
+
+        locators = pdx_data.PdxLocators()
+        locators.locators = locators_array
+
         world.objects.append(shape)
+        world.objects.append(locators)
+        objects.append(world)
+
+        f = io.open(self.filename, 'wb')
+
+        f.write(b'@@b@')
+        for i in range(0, len(objects)):
+            f.write(objects[i].get_binary_data())
+
+        f.close()

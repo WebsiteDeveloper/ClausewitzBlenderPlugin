@@ -1,4 +1,5 @@
 import io
+import struct
 from . import (utils)
 
 class PdxFile():
@@ -167,6 +168,14 @@ class PdxAsset():
         self.name = "pdxasset"
         self.value = 0
 
+    def get_binary_data(self):
+        result = bytearray()
+
+        result.extend(struct.pack("cb" + str(len(self.name)) + "s", b'!', len(self.name), self.name.encode('UTF-8')))
+        result.extend(struct.pack("cI", b'i', self.value))
+
+        return result
+
 class PdxMesh():
     def __init__(self):
         self.bounds = (0,0)
@@ -177,12 +186,18 @@ class PdxMesh():
         self.uv_coords = []
         self.material = None
 
+    def get_binary_data(self):
+        return bytearray()
+
 class PdxMaterial():
     def __init__(self):
         self.shaders = ""
         self.diffs = ""
         self.normals = ""
         self.specs = ""
+
+    def get_binary_data(self):
+        return bytearray()
 
 class PdxProperty():
     """Temporary class to hold the Values of a parsed Property until it gets mapped to the object"""
@@ -191,19 +206,44 @@ class PdxProperty():
         self.bounds = bounds
         self.value = []
 
+    def get_binary_data(self):
+        return bytearray()
+
 class PdxWorld():
     def __init__(self, objects):
         self.objects = objects
+
+    def get_binary_data(self):
+        result = bytearray()
+
+        result.extend(struct.pack("7sb", b'[object', 0)) #.encode('UTF-8')
+
+        for i in range(0, len(self.objects)):
+            result.extend(self.objects[i].get_binary_data())
+        print("World")
+        return result
 
 class PdxShape():
     def __init__(self, name):
         self.name = name
         self.mesh = None
 
+    def get_binary_data(self):
+        result = bytearray()
+
+        result.extend(struct.pack("2s", b'[['))
+        result.extend(struct.pack(str(len(self.name)) + "sb", self.name.encode('UTF-8'), 0))
+        result.extend(self.mesh.get_binary_data())
+
+        return bytearray()
+
 class PdxBounds():
     def __init__(self, min, max):
         self.min = min
         self.max = max
+
+    def get_binary_data(self):
+        return bytearray()
 
 class PdxObject():
     """Temporary object"""
@@ -212,14 +252,37 @@ class PdxObject():
         self.properties = properties
         self.depth = depth
 
+    def get_binary_data(self):
+        return bytearray()
+
 class PdxLocators():
     def __init__(self):
         self.bounds = (0,0)
         self.locators = []
 
+    def get_binary_data(self):
+        result = bytearray()
+
+        result.extend(struct.pack("8sb", b'[locator', 0))
+
+        for i in range(0, len(self.locators)):
+            result.extend(self.locators[i].get_binary_data())
+
+        return result
+
 class PdxLocator():
     def __init__(self, name, pos):
         self.bounds = (0,0)
         self.name = name
-        self.pos = pos        
+        self.pos = pos
+
+    def get_binary_data(self):
+        result = bytearray()
+
+        result.extend(struct.pack("2s", b'[['))
+        result.extend(struct.pack(str(len(self.name)) + "sb", self.name.encode('UTF-8'), 0))
+        result.extend(struct.pack("cbsifff", b'!', 0, b'pf', 3, self.pos[0], self.pos[1], self.pos[2]))
+        result.extend(struct.pack("cbsifff", b'!', 0, b'qf', 3, 0.0, 0.0, 0.0))
+
+        return result
     

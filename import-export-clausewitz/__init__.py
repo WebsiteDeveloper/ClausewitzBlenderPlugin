@@ -30,7 +30,7 @@ class ClausewitzExporter(Operator, ExportHelper):
 
     def execute(self, context):
         pdx = exporter.PdxFileExporter(self.filepath)
-        pdx.export_mesh("mesh")
+        pdx.export_mesh("Cube")
         return {'FINISHED'}
 
 class ClausewitzImporter(Operator, ImportHelper):
