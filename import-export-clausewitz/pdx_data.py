@@ -90,6 +90,14 @@ class PdxFile():
         else:
             object_name = char + utils.ReadNullByteString(buffer)
 
+            print("Object: " + object_name)
+
+            if prev_obj is not None:
+                try:
+                    print("Name: " + prev_obj.name)
+                except:
+                    print("Type: ", type(prev_obj))
+
             if object_name == "object":
                 result = PdxWorld(sub_objects)
             elif object_name == "mesh":
@@ -106,19 +114,23 @@ class PdxFile():
                     buffer.NextChar()
                     object_properties.append(self.read_property(buffer))
                 elif char == "[":
+                    print("Depth: ", depth, " : ", utils.PreviewObjectDepth(buffer))
                     if depth < utils.PreviewObjectDepth(buffer):
-                        if isinstance(prev_obj, PdxLocators):
+                        if isinstance(prev_obj, PdxLocators) or isinstance(prev_obj, PdxMesh):
                             sub_objects.append(self.read_object(buffer, 0, prev_obj))
                         else:
                             sub_objects.append(self.read_object(buffer, 0, result))
                     else:
                         break
 
+            temp = ""
+            for i in range(0, depth):
+                temp += "-"
+            print(temp + "Sub Objects: ", len(sub_objects))
+
             if object_name == "object":
-                print("World")
                 result = PdxWorld(sub_objects)
             elif object_name == "mesh":
-                print("Mesh")
                 result = PdxMesh()
                 result.verts = object_properties[0].value
                 result.faces = object_properties[4].value
@@ -128,11 +140,9 @@ class PdxFile():
                 result.bounds = sub_objects[0]
                 #result.material = sub_objects[1]
             elif object_name == "locator":
-                print("Locators")
                 result = PdxLocators()
                 result.locators = sub_objects
             elif object_name == "aabb":
-                print("Bounds")
                 result = PdxBounds(object_properties[0].value, object_properties[1].value)
             elif object_name == "material":
                 result = PdxMaterial()
@@ -142,11 +152,9 @@ class PdxFile():
                 result.specs = object_properties[3].value
             else:
                 if isinstance(prev_obj, PdxLocators):
-                    print("Locator")
                     result = PdxLocator(object_name, object_properties[0].value)
                 elif isinstance(prev_obj, PdxWorld) and object_name.endswith("MeshShape"):
                     result = PdxShape(object_name, sub_objects[0])
-                    print("Shape")
                 else:
                     result = PdxObject(object_name, object_properties, depth)
 

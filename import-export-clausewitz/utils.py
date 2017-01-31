@@ -49,7 +49,7 @@ class BufferReader:
     def SetCurrentOffset(self, offset):
         self.__offset__ = offset
 
-def PreviewObjectDepth(buffer: BufferReader, startDepth=1):
+def PreviewObjectDepth(buffer: BufferReader, startDepth=0):
     offsetTemp = buffer.GetCurrentOffset()
 
     while buffer.NextChar() == "[":
