@@ -8,7 +8,7 @@ bl_info = {
     "name": "Clausewitz Import/Export",
     "category": "Import-Export",
     "author": "Bernhard Sirlinger",
-    "version": (0, 2, 1),
+    "version": (0, 2, 2),
     "blender": (2, 78, 0),
     "support": "TESTING",
     "wiki_url": "https://github.com/WebsiteDeveloper/ClausewitzBlenderPlugin/wiki",
@@ -38,7 +38,8 @@ class ClausewitzImporter(Operator, ImportHelper):
 
     def execute(self, context):
         pdx = importer.PdxFileImporter(self.filepath)
-        pdx.AddBlenderMesh()
+        pdx.import_mesh()
+        
 
         return {'FINISHED'}      
 
