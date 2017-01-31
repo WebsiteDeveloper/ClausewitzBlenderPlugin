@@ -1,5 +1,5 @@
 import io
-from . import (tree, utils)
+from . import (utils)
 
 class PdxFile():
     """Class representing a Paradox Clausewitz Engine .mesh File."""
