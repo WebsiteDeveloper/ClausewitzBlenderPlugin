@@ -3,7 +3,7 @@ import bmesh
 import os
 import io
 from pathlib import Path
-from . import (pdx_data, tree, utils)
+from . import (pdx_data, utils)
 
 class PdxFileImporter:
     def __init__(self, filename):

@@ -154,7 +154,8 @@ class PdxFile():
                 if isinstance(prev_obj, PdxLocators):
                     result = PdxLocator(object_name, object_properties[0].value)
                 elif isinstance(prev_obj, PdxWorld) and object_name.endswith("MeshShape"):
-                    result = PdxShape(object_name, sub_objects[0])
+                    result = PdxShape(object_name)
+                    result.mesh = sub_objects[0]
                 else:
                     result = PdxObject(object_name, object_properties, depth)
 
@@ -195,9 +196,9 @@ class PdxWorld():
         self.objects = objects
 
 class PdxShape():
-    def __init__(self, name, mesh):
+    def __init__(self, name):
         self.name = name
-        self.mesh = mesh
+        self.mesh = None
 
 class PdxBounds():
     def __init__(self, min, max):
