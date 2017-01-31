@@ -89,7 +89,7 @@ def TranslatePropertyName(originalName: str):
 
     return originalName
 
-def TransposeCoordinateArray(data):
+def TransposeCoordinateArray3D(data):
     result = []
 
     if len(data) % 3 == 0:

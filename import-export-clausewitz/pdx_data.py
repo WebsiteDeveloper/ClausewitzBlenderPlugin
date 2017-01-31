@@ -132,11 +132,11 @@ class PdxFile():
                 result = PdxWorld(sub_objects)
             elif object_name == "mesh":
                 result = PdxMesh()
-                result.verts = object_properties[0].value
-                result.faces = object_properties[4].value
+                result.verts = utils.TransposeCoordinateArray3D(object_properties[0].value)
+                result.faces = utils.TransposeCoordinateArray3D(object_properties[4].value)
                 result.normals = object_properties[1].value
                 result.tangents = object_properties[2].value
-                result.uv_coords = object_properties[3].value
+                result.uv_coords = utils.TransposeCoordinateArray2D(object_properties[3].value)
                 result.bounds = sub_objects[0]
                 result.material = sub_objects[1]
             elif object_name == "locator":
