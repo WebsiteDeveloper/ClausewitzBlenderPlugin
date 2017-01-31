@@ -138,7 +138,7 @@ class PdxFile():
                 result.tangents = object_properties[2].value
                 result.uv_coords = object_properties[3].value
                 result.bounds = sub_objects[0]
-                #result.material = sub_objects[1]
+                result.material = sub_objects[1]
             elif object_name == "locator":
                 result = PdxLocators()
                 result.locators = sub_objects
