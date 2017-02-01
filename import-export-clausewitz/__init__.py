@@ -20,6 +20,13 @@ class ClausewitzExporter(Operator, ExportHelper):
     bl_idname = "clausewitz.exporter"
     bl_label = "Export .mesh (Clausewitz Engine)"
 
+    check_existing = BoolProperty(
+        name="Check Existing",
+        description="Check and warn on overwriting existing files",
+        default=True,
+        options={'HIDDEN'},
+        )
+
     filename_ext = ".mesh"
 
     filter_glob = StringProperty(
@@ -30,7 +37,7 @@ class ClausewitzExporter(Operator, ExportHelper):
 
     def execute(self, context):
         pdx = exporter.PdxFileExporter(self.filepath)
-        pdx.export_mesh("Cube")
+        pdx.export_mesh(bpy.context.active_object.name)
         return {'FINISHED'}
 
 class ClausewitzImporter(Operator, ImportHelper):

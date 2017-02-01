@@ -13,7 +13,7 @@ class PdxFileImporter:
     def import_mesh(self):
         shape = self.file.nodes[1].objects[0]
 
-        mesh_name = shape.name + "_mesh"
+        mesh_name = shape.name # + "_mesh"
 
         mesh = bpy.data.meshes.new(mesh_name)
         obj = bpy.data.objects.new(shape.name, mesh)
