@@ -235,7 +235,7 @@ class PdxShape():
         result.extend(struct.pack(str(len(self.name)) + "sb", self.name.encode('UTF-8'), 0))
         result.extend(self.mesh.get_binary_data())
 
-        return bytearray()
+        return result
 
 class PdxBounds():
     def __init__(self, min, max):
