@@ -223,6 +223,7 @@ class PdxMesh():
         for i in range(0, len(self.faces)):
             result.extend(struct.pack("III", self.faces[i][0],  self.faces[i][1],  self.faces[i][2]))
 
+        result.extend(self.bounds.get_binary_data())
         result.extend(self.material.get_binary_data())
 
         return result
@@ -236,6 +237,24 @@ class PdxMaterial():
 
     def get_binary_data(self):
         result = bytearray()
+
+        result.extend(struct.pack("12sb", b'[[[[material', 0))
+        result.extend(struct.pack("cb7s", b'!', 0, b'shaders'))
+        result.extend(struct.pack("II", 1, len(self.shaders) + 1))
+        result.extend(struct.pack(str(len(self.shaders)) + "sb", self.shaders, 0))
+        
+        
+        result.extend(struct.pack("cb5s", b'!', 0, b'diffs'))
+        result.extend(struct.pack("II", 1, len(self.diffs) + 1))
+        result.extend(struct.pack(str(len(self.diffs)) + "sb", self.diffs, 0))
+        
+        result.extend(struct.pack("cb2s", b'!', 0, b'ns'))
+        result.extend(struct.pack("II", 1, len(self.normals) + 1))
+        result.extend(struct.pack(str(len(self.normals)) + "sb", self.normals, 0))
+
+        result.extend(struct.pack("cb5s", b'!', 0, b'specs'))
+        result.extend(struct.pack("II", 1, len(self.specs) + 1))
+        result.extend(struct.pack(str(len(self.specs)) + "sb", self.specs, 0))
 
         return result
 
