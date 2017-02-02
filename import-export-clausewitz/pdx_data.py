@@ -55,6 +55,9 @@ class PdxFile():
 
             for i in range(0, data_count):
                 property_data.append(buffer.NextInt32())
+
+            if name == "pdxasset":
+                print(property_data)
         elif char == "f":
             data_count = buffer.NextUInt32()
 
@@ -172,8 +175,10 @@ class PdxAsset():
         result = bytearray()
 
         result.extend(struct.pack("cb" + str(len(self.name)) + "s", b'!', len(self.name), self.name.encode('UTF-8')))
-        result.extend(struct.pack("cI", b'i', self.value))
+        result.extend(struct.pack("cb", b'i', 2))
+        result.extend(struct.pack("iibbb", 1, 0, 0, 0, 0))
 
+        print(result)
         return result
 
 class PdxMesh():
@@ -187,7 +192,40 @@ class PdxMesh():
         self.material = None
 
     def get_binary_data(self):
-        return bytearray()
+        result = bytearray()
+
+        result.extend(struct.pack("7sb", b'[[[mesh', 0))
+        result.extend(struct.pack("cb2sI", b'!', 0, b'pf', len(self.verts) * 3))
+
+        for i in range(0, len(self.verts)):
+            result.extend(struct.pack("fff", self.verts[i][0],  self.verts[i][1],  self.verts[i][2]))
+
+        result.extend(struct.pack("cb2sI", b'!', 0, b'nf', len(self.normals) * 3))
+
+        for i in range(0, len(self.normals)):
+            result.extend(struct.pack("fff", self.normals[i][0],  self.normals[i][1],  self.normals[i][2]))
+
+        result.extend(struct.pack("cb3si", b'!', 0, b'taf', len(self.tangents) * 9))
+
+        for i in range(0, len(self.tangents)):
+            result.extend(struct.pack("fff", self.tangents[i][0],  self.tangents[i][1],  self.tangents[i][2]))
+            result.extend(struct.pack("fff", self.tangents[i][0],  self.tangents[i][1],  self.tangents[i][2]))
+            result.extend(struct.pack("fff", self.tangents[i][0],  self.tangents[i][1],  self.tangents[i][2]))
+
+
+        result.extend(struct.pack("cb3sI", b'!', 0, b'u0f', len(self.uv_coords) * 2))
+
+        for i in range(0, len(self.uv_coords)):
+            result.extend(struct.pack("ff", self.uv_coords[i][0],  self.uv_coords[i][1]))
+
+        result.extend(struct.pack("cb4sI", b'!', 0, b'trii', len(self.faces) * 3))
+
+        for i in range(0, len(self.faces)):
+            result.extend(struct.pack("III", self.faces[i][0],  self.faces[i][1],  self.faces[i][2]))
+
+        result.extend(self.material.get_binary_data())
+
+        return result
 
 class PdxMaterial():
     def __init__(self):
@@ -197,7 +235,9 @@ class PdxMaterial():
         self.specs = ""
 
     def get_binary_data(self):
-        return bytearray()
+        result = bytearray()
+
+        return result
 
 class PdxProperty():
     """Temporary class to hold the Values of a parsed Property until it gets mapped to the object"""
@@ -233,6 +273,7 @@ class PdxShape():
 
         result.extend(struct.pack("2s", b'[['))
         result.extend(struct.pack(str(len(self.name)) + "sb", self.name.encode('UTF-8'), 0))
+        
         result.extend(self.mesh.get_binary_data())
 
         return result

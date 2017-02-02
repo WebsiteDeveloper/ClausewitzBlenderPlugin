@@ -25,15 +25,54 @@ class PdxFileExporter:
         bm = bmesh.new()
         bm.from_mesh(blender_mesh)
         bm.verts.ensure_lookup_table()
+        bm.verts.index_update()
+        bm.faces.index_update()
+        bm.normal_update()
 
+        normals = []
         verts = []
+        tangents = []
 
         for i in range(0, len(bm.verts)):
             verts.append(bm.verts[i].co)
-            print(bm.verts[i].co)
+            normals.append(bm.verts[i].normal)
+
+        bm.faces.ensure_lookup_table()
+
+        for i in range(0, len(bm.faces)):
+            tangents.append(bm.faces[i].calc_tangent_edge_pair())
+
+        bm.verts.ensure_lookup_table()
+        bm.verts.index_update()
+        bm.faces.index_update()
+
+        uv_coords = []
+        uv_layer = bm.loops.layers.uv.active
+
+        for face in bm.faces:
+            for loop in face.loops:
+                uv_coords.append((0,0))
+
+        for face in bm.faces:
+            for loop in face.loops:
+                uv_coords[loop.vert.index] = loop[uv_layer].uv
+
+        faces = []
+
+        for face in bm.faces:
+            temp = []
+
+            for loop in face.loops:
+                temp.append(loop.vert.index)
+
+            faces.append(temp)
 
         mesh.verts = verts
-
+        mesh.normals = normals
+        mesh.tangents = tangents
+        mesh.uv_coords = uv_coords
+        mesh.faces = faces
+        mesh.material = pdx_data.PdxMaterial()
 
         locators_array = []
 
