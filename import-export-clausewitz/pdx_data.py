@@ -141,7 +141,7 @@ class PdxFile():
                 result.normals = object_properties[1].value
                 result.tangents = object_properties[2].value
                 result.uv_coords = utils.TransposeCoordinateArray2D(object_properties[3].value)
-                result.bounds = sub_objects[0]
+                result.meshBounds = sub_objects[0]
                 result.material = sub_objects[1]
             elif object_name == "locator":
                 result = PdxLocators()
@@ -183,7 +183,7 @@ class PdxAsset():
 
 class PdxMesh():
     def __init__(self):
-        self.bounds = (0,0)
+        self.meshBounds = None
         self.verts = []
         self.faces = []
         self.tangents = []
@@ -223,7 +223,7 @@ class PdxMesh():
         for i in range(0, len(self.faces)):
             result.extend(struct.pack("III", self.faces[i][0],  self.faces[i][1],  self.faces[i][2]))
 
-        result.extend(self.bounds.get_binary_data())
+        #result.extend(self.meshBounds.get_binary_data())
         result.extend(self.material.get_binary_data())
 
         return result
@@ -242,7 +242,6 @@ class PdxMaterial():
         result.extend(struct.pack("cb7s", b'!', 0, b'shaders'))
         result.extend(struct.pack("II", 1, len(self.shaders) + 1))
         result.extend(struct.pack(str(len(self.shaders)) + "sb", self.shaders, 0))
-        
         
         result.extend(struct.pack("cb5s", b'!', 0, b'diffs'))
         result.extend(struct.pack("II", 1, len(self.diffs) + 1))
@@ -303,7 +302,16 @@ class PdxBounds():
         self.max = max
 
     def get_binary_data(self):
-        return bytearray()
+        result = bytearray()
+        
+        result.extend(struct.pack("8sb", b'[[[[aabb', 0))
+
+        result.extend(struct.pack("cb4s", b'!', 0, b'minf'))
+        result.extend(struct.pack("Ifff", 3, self.min[0], self.min[1], self.min[2]))
+        result.extend(struct.pack("cb4s", b'!', 0, b'maxf'))
+        result.extend(struct.pack("Ifff", 3, self.max[0], self.max[1], self.max[2]))
+
+        return result
 
 class PdxObject():
     """Temporary object"""
