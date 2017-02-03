@@ -27,7 +27,7 @@ class PdxFileExporter:
         bm.verts.ensure_lookup_table()
         bm.verts.index_update()
         bm.faces.index_update()
-        bm.normal_update()
+        bm.verts.ensure_lookup_table()
 
         normals = []
         verts = []
@@ -35,16 +35,22 @@ class PdxFileExporter:
 
         for i in range(0, len(bm.verts)):
             verts.append(bm.verts[i].co)
+            bm.verts[i].normal_update()
+
             normals.append(bm.verts[i].normal)
 
         bm.faces.ensure_lookup_table()
 
         for i in range(0, len(bm.faces)):
-            tangents.append(bm.faces[i].calc_tangent_edge_pair())
+            tangents.append(bm.faces[i].calc_tangent_edge_pair().to_4d())
+            tangents.append(bm.faces[i].calc_tangent_edge_pair().to_4d())
+            tangents.append(bm.faces[i].calc_tangent_edge_pair().to_4d())
 
         bm.verts.ensure_lookup_table()
         bm.verts.index_update()
         bm.faces.index_update()
+
+        print("Edges: " + str(len(bm.edges)))
 
         uv_coords = []
         uv_layer = bm.loops.layers.uv.active

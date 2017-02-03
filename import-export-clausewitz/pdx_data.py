@@ -94,14 +94,6 @@ class PdxFile():
         else:
             object_name = char + utils.ReadNullByteString(buffer)
 
-            print("Object: " + object_name)
-
-            if prev_obj is not None:
-                try:
-                    print("Name: " + prev_obj.name)
-                except:
-                    print("Type: ", type(prev_obj))
-
             if object_name == "object":
                 result = PdxWorld(sub_objects)
             elif object_name == "mesh":
@@ -118,7 +110,7 @@ class PdxFile():
                     buffer.NextChar()
                     object_properties.append(self.read_property(buffer))
                 elif char == "[":
-                    print("Depth: ", depth, " : ", utils.PreviewObjectDepth(buffer))
+                    #print("Depth: ", depth, " : ", utils.PreviewObjectDepth(buffer))
                     if depth < utils.PreviewObjectDepth(buffer):
                         if isinstance(prev_obj, PdxLocators) or isinstance(prev_obj, PdxMesh):
                             sub_objects.append(self.read_object(buffer, 0, prev_obj))
@@ -127,19 +119,23 @@ class PdxFile():
                     else:
                         break
 
-            temp = ""
-            for i in range(0, depth):
-                temp += "-"
-            print(temp + "Sub Objects: ", len(sub_objects))
+            #temp = ""
+            #for i in range(0, depth):
+            #    temp += "-"
+            #print(temp + "Sub Objects: ", len(sub_objects))
 
             if object_name == "object":
                 result = PdxWorld(sub_objects)
             elif object_name == "mesh":
                 result = PdxMesh()
                 result.verts = utils.TransposeCoordinateArray3D(object_properties[0].value)
+                print("Verts: " + str(len(object_properties[0].value)))
                 result.faces = utils.TransposeCoordinateArray3D(object_properties[4].value)
-                result.normals = object_properties[1].value
+                print("Faces: " + str(len(object_properties[4].value)))
+                result.normals = utils.TransposeCoordinateArray3D(object_properties[1].value)
+                print("Normals: " + str(len(object_properties[1].value)))
                 result.tangents = object_properties[2].value
+                print("Tangents: " + str(len(object_properties[2].value)))
                 result.uv_coords = utils.TransposeCoordinateArray2D(object_properties[3].value)
                 result.meshBounds = sub_objects[0]
                 result.material = sub_objects[1]
@@ -176,7 +172,7 @@ class PdxAsset():
 
         result.extend(struct.pack("cb" + str(len(self.name)) + "s", b'!', len(self.name), self.name.encode('UTF-8')))
         result.extend(struct.pack("cb", b'i', 2))
-        result.extend(struct.pack("iibbb", 1, 0, 0, 0, 0))
+        result.extend(struct.pack(">iibbb", 1, 0, 0, 0, 0))
 
         print(result)
         return result
@@ -195,30 +191,29 @@ class PdxMesh():
         result = bytearray()
 
         result.extend(struct.pack("7sb", b'[[[mesh', 0))
-        result.extend(struct.pack("cb2sI", b'!', 0, b'pf', len(self.verts) * 3))
+        result.extend(struct.pack("cb2sI", b'!', 1, b'pf', len(self.verts) * 3))
 
         for i in range(0, len(self.verts)):
-            result.extend(struct.pack("fff", self.verts[i][0],  self.verts[i][1],  self.verts[i][2]))
+            result.extend(struct.pack("fff", self.verts[i][0], self.verts[i][1], self.verts[i][2]))
 
-        result.extend(struct.pack("cb2sI", b'!', 0, b'nf', len(self.normals) * 3))
+        result.extend(struct.pack("cb2sI", b'!', 1, b'nf', len(self.normals) * 3))
 
         for i in range(0, len(self.normals)):
-            result.extend(struct.pack("fff", self.normals[i][0],  self.normals[i][1],  self.normals[i][2]))
+            result.extend(struct.pack("fff", self.normals[i][0], self.normals[i][1], self.normals[i][2]))
 
-        result.extend(struct.pack("cb3si", b'!', 0, b'taf', len(self.tangents) * 9))
+        result.extend(struct.pack("cb3sI", b'!', 2, b'taf', len(self.tangents) * 4))
+
+        print(len(self.tangents) * 4)
 
         for i in range(0, len(self.tangents)):
-            result.extend(struct.pack("fff", self.tangents[i][0],  self.tangents[i][1],  self.tangents[i][2]))
-            result.extend(struct.pack("fff", self.tangents[i][0],  self.tangents[i][1],  self.tangents[i][2]))
-            result.extend(struct.pack("fff", self.tangents[i][0],  self.tangents[i][1],  self.tangents[i][2]))
+            result.extend(struct.pack("ffff", self.tangents[i][0], self.tangents[i][1], self.tangents[i][2], self.tangents[i][3]))
 
-
-        result.extend(struct.pack("cb3sI", b'!', 0, b'u0f', len(self.uv_coords) * 2))
+        result.extend(struct.pack("cb3sI", b'!', 2, b'u0f', len(self.uv_coords) * 2))
 
         for i in range(0, len(self.uv_coords)):
             result.extend(struct.pack("ff", self.uv_coords[i][0],  self.uv_coords[i][1]))
 
-        result.extend(struct.pack("cb4sI", b'!', 0, b'trii', len(self.faces) * 3))
+        result.extend(struct.pack("cb4sI", b'!', 3, b'trii', len(self.faces) * 3))
 
         for i in range(0, len(self.faces)):
             result.extend(struct.pack("III", self.faces[i][0],  self.faces[i][1],  self.faces[i][2]))
@@ -239,7 +234,7 @@ class PdxMaterial():
         result = bytearray()
 
         result.extend(struct.pack("12sb", b'[[[[material', 0))
-        result.extend(struct.pack("cb7s", b'!', 0, b'shaders'))
+        result.extend(struct.pack("cb7s", b'!', 6, b'shaders'))
         result.extend(struct.pack("II", 1, len(self.shaders) + 1))
         result.extend(struct.pack(str(len(self.shaders)) + "sb", self.shaders.encode("UTF-8"), 0))
         
