@@ -69,6 +69,7 @@ class PdxFileExporter:
         for face in bm.faces:
             for loop in face.loops:
                 uv_coords[loop.vert.index] = loop[uv_layer].uv
+                uv_coords[loop.vert.index][1] = 1 - uv_coords[loop.vert.index][1]
 
         max_index = 0
 
