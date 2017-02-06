@@ -46,10 +46,15 @@ class PdxFileImporter:
         tex.type = 'IMAGE'
 
         img_file = Path(os.path.join(os.path.dirname(self.file.filename), shape.mesh.material.diffs))
+        altImageFile = Path(os.path.join(os.path.dirname(self.file.filename), os.path.basename(self.file.filename).replace(".mesh", "") + "_diffuse.dds"))
 
         if img_file.is_file():
             img_file.resolve()
             image = bpy.data.images.load(str(img_file))
+            tex.image = image
+        elif altImageFile.is_file():
+            altImageFile.resolve()
+            image = bpy.data.images.load(str(altImageFile))
             tex.image = image
         else:
             print("No Texture File was found.")
