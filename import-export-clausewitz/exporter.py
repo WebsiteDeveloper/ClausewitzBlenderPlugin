@@ -36,15 +36,22 @@ class PdxFileExporter:
         for i in range(0, len(bm.verts)):
             verts.append(bm.verts[i].co)
             bm.verts[i].normal_update()
-
-            normals.append(bm.verts[i].normal)
+            bm.verts[i].normal.normalize()
+            normals.append((0.0, 0.0, 0.0)) #bm.verts[i].normal)
+            #print(bm.verts[i].normal[0], " - ", bm.verts[i].normal[1], " - ", bm.verts[i].normal[2])
 
         bm.faces.ensure_lookup_table()
 
-        for i in range(0, len(bm.faces)):
-            tangents.append(bm.faces[i].calc_tangent_edge_pair().to_4d())
-            tangents.append(bm.faces[i].calc_tangent_edge_pair().to_4d())
-            tangents.append(bm.faces[i].calc_tangent_edge_pair().to_4d())
+        for i in range(0, len(bm.verts)):
+            tangents.append((0.0, 0.0, 0.0, 0.0))
+        #for face in bm.faces:
+        #    for loop in face.loops:
+        #         tangents.append((0.0, 0.0, 0.0, 0.0))
+
+        #for i in range(0, len(bm.faces)):
+         #   tangents.append((0.0, 0.0, 0.0, 0.0)) #bm.faces[i].calc_tangent_edge_pair().to_4d())
+            #tangents.append(bm.faces[i].calc_tangent_edge_pair().to_4d())
+            #tangents.append(bm.faces[i].calc_tangent_edge_pair().to_4d())
 
         bm.verts.ensure_lookup_table()
         bm.verts.index_update()
@@ -63,6 +70,19 @@ class PdxFileExporter:
             for loop in face.loops:
                 uv_coords[loop.vert.index] = loop[uv_layer].uv
 
+        max_index = 0
+
+        print(len(uv_coords))
+
+        #Trim data, remove empty bytes
+        for i in range(0, len(uv_coords)):
+            #print(uv_coords[i])
+            if uv_coords[i][0] == 0.0 and uv_coords[i][1] == 0.0:
+                max_index = i - 1
+                break;
+
+        del uv_coords[max_index:(len(uv_coords) - 1)]
+
         faces = []
 
         for face in bm.faces:
@@ -78,7 +98,22 @@ class PdxFileExporter:
         mesh.tangents = tangents
         mesh.uv_coords = uv_coords
         mesh.faces = faces
+        mesh.meshBounds = pdx_data.PdxBounds((0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
         mesh.material = pdx_data.PdxMaterial()
+
+        diff_file = ""
+
+        for mat_slot in bpy.data.objects[name].material_slots:
+            for mtex_slot in mat_slot.material.texture_slots:
+                if mtex_slot:
+                    if hasattr(mtex_slot.texture , 'image'):
+                        print(mtex_slot.texture.name)
+                        diff_file = os.path.split(mtex_slot.texture.image.filepath)[1]
+
+        mesh.material.shaders = "PdxMeshShip"
+        mesh.material.diffs = diff_file 
+        mesh.material.specs = "test_spec"
+        mesh.material.normals = "test_normal"
 
         locators_array = []
 

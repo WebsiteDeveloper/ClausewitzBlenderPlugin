@@ -137,6 +137,7 @@ class PdxFile():
                 result.tangents = object_properties[2].value
                 print("Tangents: " + str(len(object_properties[2].value)))
                 result.uv_coords = utils.TransposeCoordinateArray2D(object_properties[3].value)
+                print("UV-Map: " + str(len(object_properties[3].value)))
                 result.meshBounds = sub_objects[0]
                 result.material = sub_objects[1]
             elif object_name == "locator":
@@ -201,24 +202,33 @@ class PdxMesh():
         for i in range(0, len(self.normals)):
             result.extend(struct.pack("fff", self.normals[i][0], self.normals[i][1], self.normals[i][2]))
 
-        result.extend(struct.pack("cb3sI", b'!', 2, b'taf', len(self.tangents) * 4))
+        result.extend(struct.pack("cb3s", b'!', 2, b'taf'))
+        result.extend(struct.pack("I", len(self.tangents) * 4))
 
         print(len(self.tangents) * 4)
 
         for i in range(0, len(self.tangents)):
-            result.extend(struct.pack("ffff", self.tangents[i][0], self.tangents[i][1], self.tangents[i][2], self.tangents[i][3]))
+            result.extend(struct.pack("f", self.tangents[i][0]))
+            result.extend(struct.pack("f", self.tangents[i][1]))
+            result.extend(struct.pack("f", self.tangents[i][2]))
+            result.extend(struct.pack("f", self.tangents[i][3]))
 
-        result.extend(struct.pack("cb3sI", b'!', 2, b'u0f', len(self.uv_coords) * 2))
+        result.extend(struct.pack("cb3s", b'!', 2, b'u0f'))
+        result.extend(struct.pack("I", len(self.uv_coords) * 2))
 
         for i in range(0, len(self.uv_coords)):
-            result.extend(struct.pack("ff", self.uv_coords[i][0],  self.uv_coords[i][1]))
+            result.extend(struct.pack("f", self.uv_coords[i][0]))
+            result.extend(struct.pack("f", self.uv_coords[i][1]))
 
-        result.extend(struct.pack("cb4sI", b'!', 3, b'trii', len(self.faces) * 3))
+        print("UV-Map-Export: " + str(len(self.uv_coords)))
+
+        result.extend(struct.pack("cb4s", b'!', 3, b'trii'))
+        result.extend(struct.pack("I", len(self.faces) * 3))
 
         for i in range(0, len(self.faces)):
             result.extend(struct.pack("III", self.faces[i][0],  self.faces[i][1],  self.faces[i][2]))
 
-        #result.extend(self.meshBounds.get_binary_data())
+        result.extend(self.meshBounds.get_binary_data())
         result.extend(self.material.get_binary_data())
 
         return result
