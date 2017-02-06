@@ -3,7 +3,7 @@ import bmesh
 import os
 import io
 from pathlib import Path
-from . import (pdx_data, tree, utils)
+from . import (pdx_data, utils)
 
 class PdxFileImporter:
     def __init__(self, filename):
@@ -13,7 +13,7 @@ class PdxFileImporter:
     def import_mesh(self):
         shape = self.file.nodes[1].objects[0]
 
-        mesh_name = shape.name + "_mesh"
+        mesh_name = shape.name # + "_mesh"
 
         mesh = bpy.data.meshes.new(mesh_name)
         obj = bpy.data.objects.new(shape.name, mesh)
@@ -46,10 +46,15 @@ class PdxFileImporter:
         tex.type = 'IMAGE'
 
         img_file = Path(os.path.join(os.path.dirname(self.file.filename), shape.mesh.material.diffs))
+        altImageFile = Path(os.path.join(os.path.dirname(self.file.filename), os.path.basename(self.file.filename).replace(".mesh", "") + "_diffuse.dds"))
 
         if img_file.is_file():
             img_file.resolve()
             image = bpy.data.images.load(str(img_file))
+            tex.image = image
+        elif altImageFile.is_file():
+            altImageFile.resolve()
+            image = bpy.data.images.load(str(altImageFile))
             tex.image = image
         else:
             print("No Texture File was found.")

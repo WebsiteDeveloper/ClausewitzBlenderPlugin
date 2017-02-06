@@ -1,8 +1,8 @@
 import bpy
 from bpy_types import (Operator)
-from bpy_extras.io_utils import (ImportHelper)
+from bpy_extras.io_utils import (ImportHelper, ExportHelper)
 from bpy.props import (StringProperty, BoolProperty, EnumProperty)
-from . import (importer)
+from . import (importer, exporter)
 
 bl_info = {
     "name": "Clausewitz Import/Export",
@@ -15,13 +15,30 @@ bl_info = {
     "tracker_url": "https://github.com/WebsiteDeveloper/ClausewitzBlenderPlugin/issues"
 }
 
-class ClausewitzExporter(Operator):
+class ClausewitzExporter(Operator, ExportHelper):
     """Clausewitz Exporter"""
     bl_idname = "clausewitz.exporter"
     bl_label = "Export .mesh (Clausewitz Engine)"
 
+    check_existing = BoolProperty(
+        name="Check Existing",
+        description="Check and warn on overwriting existing files",
+        default=True,
+        options={'HIDDEN'},
+        )
+
+    filename_ext = ".mesh"
+
+    filter_glob = StringProperty(
+        default="*.mesh",
+        options={'HIDDEN'},
+        maxlen=255,  # Max internal buffer length, longer would be clamped.
+        )
+
     def execute(self, context):
-        return {'FINISHED'}        
+        pdx = exporter.PdxFileExporter(self.filepath)
+        pdx.export_mesh(bpy.context.active_object.name)
+        return {'FINISHED'}
 
 class ClausewitzImporter(Operator, ImportHelper):
     """Clausewitz Importer"""
@@ -31,15 +48,14 @@ class ClausewitzImporter(Operator, ImportHelper):
     filename_ext = ".mesh"
 
     filter_glob = StringProperty(
-            default="*.mesh",
-            options={'HIDDEN'},
-            maxlen=255,  # Max internal buffer length, longer would be clamped.
-            )
+        default="*.mesh",
+        options={'HIDDEN'},
+        maxlen=255,  # Max internal buffer length, longer would be clamped.
+        )
 
     def execute(self, context):
         pdx = importer.PdxFileImporter(self.filepath)
         pdx.import_mesh()
-        
 
         return {'FINISHED'}      
 

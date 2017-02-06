@@ -25,13 +25,11 @@
     <Folder Include="import-export-clausewitz\" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="import-export-clausewitz\exporter.py" />
     <Compile Include="import-export-clausewitz\importer.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="import-export-clausewitz\pdx_data.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="import-export-clausewitz\tree.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="import-export-clausewitz\utils.py">
