@@ -37,27 +37,16 @@ class PdxFileExporter:
             verts.append(bm.verts[i].co)
             bm.verts[i].normal_update()
             bm.verts[i].normal.normalize()
-            normals.append((0.0, 0.0, 0.0)) #bm.verts[i].normal)
-            #print(bm.verts[i].normal[0], " - ", bm.verts[i].normal[1], " - ", bm.verts[i].normal[2])
+            normals.append((0.0, 0.0, 0.0))
 
         bm.faces.ensure_lookup_table()
 
         for i in range(0, len(bm.verts)):
             tangents.append((0.0, 0.0, 0.0, 0.0))
-        #for face in bm.faces:
-        #    for loop in face.loops:
-        #         tangents.append((0.0, 0.0, 0.0, 0.0))
-
-        #for i in range(0, len(bm.faces)):
-         #   tangents.append((0.0, 0.0, 0.0, 0.0)) #bm.faces[i].calc_tangent_edge_pair().to_4d())
-            #tangents.append(bm.faces[i].calc_tangent_edge_pair().to_4d())
-            #tangents.append(bm.faces[i].calc_tangent_edge_pair().to_4d())
 
         bm.verts.ensure_lookup_table()
         bm.verts.index_update()
         bm.faces.index_update()
-
-        print("Edges: " + str(len(bm.edges)))
 
         uv_coords = []
         uv_layer = bm.loops.layers.uv.active
@@ -72,8 +61,6 @@ class PdxFileExporter:
                 uv_coords[loop.vert.index][1] = 1 - uv_coords[loop.vert.index][1]
 
         max_index = 0
-
-        print(len(uv_coords))
 
         #Trim data, remove empty bytes
         for i in range(0, len(uv_coords)):
