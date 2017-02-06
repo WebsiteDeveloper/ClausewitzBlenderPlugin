@@ -90,7 +90,13 @@ class PdxFile():
         sub_objects = []
 
         if char == "[":
-            return self.read_object(buffer, depth + 1, prev_obj)
+            depth_temp = 1
+            
+            while buffer.NextChar(True) == '[':
+                buffer.NextChar()
+                depth_temp += 1
+                
+            return self.read_object(buffer, depth_temp, prev_obj)
         else:
             object_name = char + utils.ReadNullByteString(buffer)
 
@@ -248,15 +254,15 @@ class PdxMaterial():
         result.extend(struct.pack("II", 1, len(self.shaders) + 1))
         result.extend(struct.pack(str(len(self.shaders)) + "sb", self.shaders.encode("UTF-8"), 0))
         
-        result.extend(struct.pack("cb5s", b'!', 0, b'diffs'))
+        result.extend(struct.pack("cb5s", b'!', 4, b'diffs'))
         result.extend(struct.pack("II", 1, len(self.diffs) + 1))
         result.extend(struct.pack(str(len(self.diffs)) + "sb", self.diffs.encode("UTF-8"), 0))
         
-        result.extend(struct.pack("cb2s", b'!', 0, b'ns'))
+        result.extend(struct.pack("cb2s", b'!', 1, b'ns'))
         result.extend(struct.pack("II", 1, len(self.normals) + 1))
         result.extend(struct.pack(str(len(self.normals)) + "sb", self.normals.encode("UTF-8"), 0))
 
-        result.extend(struct.pack("cb5s", b'!', 0, b'specs'))
+        result.extend(struct.pack("cb5s", b'!', 4, b'specs'))
         result.extend(struct.pack("II", 1, len(self.specs) + 1))
         result.extend(struct.pack(str(len(self.specs)) + "sb", self.specs.encode("UTF-8"), 0))
 
@@ -311,9 +317,9 @@ class PdxBounds():
         
         result.extend(struct.pack("8sb", b'[[[[aabb', 0))
 
-        result.extend(struct.pack("cb4s", b'!', 0, b'minf'))
+        result.extend(struct.pack("cb4s", b'!', 3, b'minf'))
         result.extend(struct.pack("Ifff", 3, self.min[0], self.min[1], self.min[2]))
-        result.extend(struct.pack("cb4s", b'!', 0, b'maxf'))
+        result.extend(struct.pack("cb4s", b'!', 3, b'maxf'))
         result.extend(struct.pack("Ifff", 3, self.max[0], self.max[1], self.max[2]))
 
         return result
