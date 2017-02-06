@@ -79,7 +79,7 @@ class PdxFileExporter:
             #print(uv_coords[i])
             if uv_coords[i][0] == 0.0 and uv_coords[i][1] == 0.0:
                 max_index = i - 1
-                break;
+                break
 
         del uv_coords[max_index:(len(uv_coords) - 1)]
 

@@ -3,7 +3,7 @@
     "deploy": {
         "packages": [
             {
-                "name": "Version 0",
+                "name": "ClausewitzBlender",
                 "description": "Package version 0",
                 "files": [
                     "**/*.py"
@@ -11,16 +11,12 @@
                 "exclude": [],
                 "deployOnSave": true,
                 "deployOnChange": true
-            },
-            {
-                "name": "Version 2.3.5 (anything)",
-                "description": "Package version 2.3.5"
             }
         ],
         "targets": [
             {
                 "type": "local",
-                "name": "My local folder",
+                "name": "Blender",
                 "description": "A local folder",
 
                 "dir": "C:/Program Files/Blender Foundation/Blender/2.78/scripts/addons"
