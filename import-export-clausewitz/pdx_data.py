@@ -285,11 +285,11 @@ class PdxWorld():
     def get_binary_data(self):
         result = bytearray()
 
-        result.extend(struct.pack("7sb", b'[object', 0)) #.encode('UTF-8')
+        result.extend(struct.pack("7sb", b'[object', 0))
 
         for i in range(0, len(self.objects)):
             result.extend(self.objects[i].get_binary_data())
-        print("World")
+        
         return result
 
 class PdxShape():
@@ -360,8 +360,8 @@ class PdxLocator():
 
         result.extend(struct.pack("2s", b'[['))
         result.extend(struct.pack(str(len(self.name)) + "sb", self.name.encode('UTF-8'), 0))
-        result.extend(struct.pack("cbsifff", b'!', 0, b'pf', 3, self.pos[0], self.pos[1], self.pos[2]))
-        result.extend(struct.pack("cbsifff", b'!', 0, b'qf', 3, 0.0, 0.0, 0.0))
+        result.extend(struct.pack("cb2sifff", b'!', 1, b'pf', 3, self.pos[0], self.pos[1], self.pos[2]))
+        result.extend(struct.pack("cb2sifff", b'!', 1, b'qf', 3, 0.0, 0.0, 0.0))
 
         return result
     
