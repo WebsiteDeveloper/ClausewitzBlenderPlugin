@@ -91,12 +91,15 @@ class PdxFileExporter:
 
         diff_file = ""
 
-        for mat_slot in bpy.data.objects[name].material_slots:
-            for mtex_slot in mat_slot.material.texture_slots:
-                if mtex_slot:
-                    if hasattr(mtex_slot.texture , 'image'):
-                        print(mtex_slot.texture.name)
-                        diff_file = os.path.split(mtex_slot.texture.image.filepath)[1]
+        if len(bpy.data.objects[name].material_slots) > 0:
+            for mat_slot in bpy.data.objects[name].material_slots:
+                for mtex_slot in mat_slot.material.texture_slots:
+                    if mtex_slot:
+                        if hasattr(mtex_slot.texture , 'image'):
+                            print(mtex_slot.texture.name)
+                            diff_file = os.path.basename(mtex_slot.texture.image.filepath)
+        else:
+            diff_file = os.path.basename(bpy.data.meshes['Body'].uv_textures[0].data[0].image.filepath)
 
         mesh.material.shaders = "PdxMeshShip"
         mesh.material.diffs = diff_file 
