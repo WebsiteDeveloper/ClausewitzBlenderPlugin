@@ -2,6 +2,8 @@ import bpy
 import bmesh
 import os
 import io
+import mathutils
+import math
 from pathlib import Path
 from . import (pdx_data, utils)
 
@@ -28,6 +30,7 @@ class PdxFileExporter:
 
         bm = bmesh.new()
         bm.from_mesh(blender_mesh)
+        bmesh.ops.triangulate(bm, faces=bm.faces)
         bm.verts.ensure_lookup_table()
         bm.verts.index_update()
         bm.faces.index_update()
@@ -37,8 +40,17 @@ class PdxFileExporter:
         verts = []
         tangents = []
 
+        transform = mathutils.Matrix()
+        transform.identity()
+        transform[0][0] = bpy.data.objects[name].scale[0]
+        transform[1][1] = bpy.data.objects[name].scale[1]
+        transform[2][2] = bpy.data.objects[name].scale[2]
+        print(transform)
+        #mathutils.Matrix. Vector((1.0, 1.0, 1.0))
+
+
         for i in range(0, len(bm.verts)):
-            verts.append(bm.verts[i].co)
+            verts.append(bm.verts[i].co * transform)
             bm.verts[i].normal_update()
             bm.verts[i].normal.normalize()
             normals.append((0.0, 0.0, 0.0))
@@ -103,7 +115,7 @@ class PdxFileExporter:
                             print(mtex_slot.texture.name)
                             diff_file = os.path.basename(mtex_slot.texture.image.filepath)
         else:
-            diff_file = os.path.basename(bpy.data.meshes['Body'].uv_textures[0].data[0].image.filepath)
+            diff_file = os.path.basename(bpy.data.meshes[name].uv_textures[0].data[0].image.filepath)
 
         mesh.material.shaders = "PdxMeshShip"
         mesh.material.diffs = diff_file 
