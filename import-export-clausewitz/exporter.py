@@ -15,7 +15,11 @@ class PdxFileExporter:
         objects.append(pdx_data.PdxAsset())
         
         world = pdx_data.PdxWorld([])
-        shape = pdx_data.PdxShape(name)
+
+        if name.endswith("MeshShape"):
+            shape = pdx_data.PdxShape(name)
+        else:
+            shape = pdx_data.PdxShape(name + ":MeshShape")
 
         mesh = pdx_data.PdxMesh()
         shape.mesh = mesh
