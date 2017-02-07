@@ -103,7 +103,7 @@ class PdxFileExporter:
                             print(mtex_slot.texture.name)
                             diff_file = os.path.basename(mtex_slot.texture.image.filepath)
         else:
-            diff_file = os.path.basename(bpy.data.meshes['Body'].uv_textures[0].data[0].image.filepath)
+            diff_file = os.path.basename(bpy.data.meshes[name].uv_textures[0].data[0].image.filepath)
 
         mesh.material.shaders = "PdxMeshShip"
         mesh.material.diffs = diff_file 
