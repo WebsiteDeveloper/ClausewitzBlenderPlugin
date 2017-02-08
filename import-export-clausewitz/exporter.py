@@ -45,15 +45,12 @@ class PdxFileExporter:
         transform[0][0] = bpy.data.objects[name].scale[0]
         transform[1][1] = bpy.data.objects[name].scale[1]
         transform[2][2] = bpy.data.objects[name].scale[2]
-        print(transform)
-        #mathutils.Matrix. Vector((1.0, 1.0, 1.0))
-
 
         for i in range(0, len(bm.verts)):
             verts.append(bm.verts[i].co * transform)
             bm.verts[i].normal_update()
-            bm.verts[i].normal.normalize()
-            normals.append((0.0, 0.0, 0.0))
+            #bm.verts[i].normal.invert()
+            normals.append(bm.verts[i].normal)
 
         bm.faces.ensure_lookup_table()
 
