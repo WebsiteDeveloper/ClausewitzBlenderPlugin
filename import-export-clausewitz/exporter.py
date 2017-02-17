@@ -40,17 +40,12 @@ class PdxFileExporter:
         verts = []
         tangents = []
 
-        transform = mathutils.Matrix()
-        transform.identity()
-        transform[0][0] = bpy.data.objects[name].scale[0]
-        transform[1][1] = bpy.data.objects[name].scale[1]
-        transform[2][2] = bpy.data.objects[name].scale[2]
-
         for i in range(0, len(bm.verts)):
-            verts.append(bm.verts[i].co * transform)
+            verts.append(bm.verts[i].co * bpy.data.objects[name].matrix_world)
             bm.verts[i].normal_update()
-            #bm.verts[i].normal.invert()
-            normals.append(bm.verts[i].normal)
+            normal_temp = bm.verts[i].normal
+            normal_temp.normalize()
+            normals.append(normal_temp)
 
         bm.faces.ensure_lookup_table()
 
@@ -109,8 +104,11 @@ class PdxFileExporter:
                 for mtex_slot in mat_slot.material.texture_slots:
                     if mtex_slot:
                         if hasattr(mtex_slot.texture , 'image'):
-                            print(mtex_slot.texture.name)
-                            diff_file = os.path.basename(mtex_slot.texture.image.filepath)
+                            if mtex_slot.texture.image is None:
+                                bpy.ops.error.message('INVOKE_SCREEN',
+                                                      message = "The Texture Image file is not loaded")  
+                            else:
+                                diff_file = os.path.basename(mtex_slot.texture.image.filepath)
         else:
             diff_file = os.path.basename(bpy.data.meshes[name].uv_textures[0].data[0].image.filepath)
 
