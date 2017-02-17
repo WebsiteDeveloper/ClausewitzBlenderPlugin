@@ -1,21 +1,23 @@
-import bpy
-import bmesh
+from pathlib import Path
 import os
 import io
-import mathutils
 import math
-from pathlib import Path
+
+import bpy
+import bmesh
+import mathutils
 from . import (pdx_data, utils)
 
 class PdxFileExporter:
+    """File Exporter Class"""
     def __init__(self, filename):
         self.filename = filename
 
     def export_mesh(self, name):
         objects = []
-        
+
         objects.append(pdx_data.PdxAsset())
-        
+
         world = pdx_data.PdxWorld([])
 
         if name.endswith("MeshShape"):
@@ -43,7 +45,7 @@ class PdxFileExporter:
         for i in range(0, len(bm.verts)):
             verts.append(bm.verts[i].co * bpy.data.objects[name].matrix_world)
             bm.verts[i].normal_update()
-            normal_temp = bm.verts[i].normal
+            normal_temp = bm.verts[i].normal * bpy.data.objects[name].matrix_world
             normal_temp.normalize()
             normals.append(normal_temp)
 
@@ -61,7 +63,7 @@ class PdxFileExporter:
 
         for face in bm.faces:
             for loop in face.loops:
-                uv_coords.append((0,0))
+                uv_coords.append((0, 0))
 
         for face in bm.faces:
             for loop in face.loops:
@@ -103,17 +105,17 @@ class PdxFileExporter:
             for mat_slot in bpy.data.objects[name].material_slots:
                 for mtex_slot in mat_slot.material.texture_slots:
                     if mtex_slot:
-                        if hasattr(mtex_slot.texture , 'image'):
+                        if hasattr(mtex_slot.texture, 'image'):
                             if mtex_slot.texture.image is None:
                                 bpy.ops.error.message('INVOKE_SCREEN',
-                                                      message = "The Texture Image file is not loaded")  
+                                                      message="The Texture Image file is not loaded")
                             else:
                                 diff_file = os.path.basename(mtex_slot.texture.image.filepath)
         else:
             diff_file = os.path.basename(bpy.data.meshes[name].uv_textures[0].data[0].image.filepath)
 
         mesh.material.shaders = "PdxMeshShip"
-        mesh.material.diffs = diff_file 
+        mesh.material.diffs = diff_file
         mesh.material.specs = "test_spec"
         mesh.material.normals = "test_normal"
 
@@ -131,10 +133,10 @@ class PdxFileExporter:
         world.objects.append(locators)
         objects.append(world)
 
-        f = io.open(self.filename, 'wb')
+        result_file = io.open(self.filename, 'wb')
 
-        f.write(b'@@b@')
+        result_file.write(b'@@b@')
         for i in range(0, len(objects)):
-            f.write(objects[i].get_binary_data())
+            result_file.write(objects[i].get_binary_data())
 
-        f.close()
+        result_file.close()
