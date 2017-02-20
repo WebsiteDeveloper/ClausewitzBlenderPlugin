@@ -10,7 +10,7 @@ bl_info = {
     "author": "Bernhard Sirlinger",
     "version": (0, 4, 0),
     "blender": (2, 78, 0),
-    "support": "TESTING",
+    "support": "COMMUNITY",
     "wiki_url": "https://github.com/WebsiteDeveloper/ClausewitzBlenderPlugin/wiki",
     "tracker_url": "https://github.com/WebsiteDeveloper/ClausewitzBlenderPlugin/issues"
 }

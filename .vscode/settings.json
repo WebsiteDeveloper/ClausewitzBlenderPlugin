@@ -20,6 +20,13 @@
                 "description": "A local folder",
 
                 "dir": "C:/Program Files/Blender Foundation/Blender/2.78/scripts/addons"
+            },
+            {
+                "type": "zip",
+                "name": "Blender ZIP",
+                "description": "Release ZIP",
+                "open": false,
+                "fileName": "ClausewitzBlenderPlugin.zip"
             }
         ]
     }
