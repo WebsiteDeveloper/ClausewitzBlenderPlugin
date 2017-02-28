@@ -3,14 +3,28 @@
     "deploy": {
         "packages": [
             {
-                "name": "ClausewitzBlender",
-                "description": "Package version 0",
+                "name": "ClausewitzBlender Live Deploy",
+                "description": "Deploy to Local Blender",
                 "files": [
                     "**/*.py"
                 ],
                 "exclude": [],
-                "deployOnSave": true,
-                "deployOnChange": true
+                "deployOnSave": ["Blender"],
+                "deployOnChange": true,
+                "isHidden": true
+            },
+            {
+                "name": "ClausewitzBlender ZIP Deploy",
+                "description": "Deploy to Local ZIP",
+                "files": [
+                    "/import-export-clausewitz/*.py",
+                    "LICENCE",
+                    "README.md"
+                ],
+                "exclude": ["*.zip"],
+                "deployOnSave": false,
+                "deployOnChange": false,
+                "isHidden": true
             }
         ],
         "targets": [

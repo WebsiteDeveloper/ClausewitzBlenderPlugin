@@ -116,7 +116,6 @@ class PdxFile():
                     buffer.NextChar()
                     object_properties.append(self.read_property(buffer))
                 elif char == "[":
-                    #print("Depth: ", depth, " : ", utils.PreviewObjectDepth(buffer))
                     if depth < utils.PreviewObjectDepth(buffer):
                         if isinstance(prev_obj, PdxLocators) or isinstance(prev_obj, PdxMesh):
                             sub_objects.append(self.read_object(buffer, 0, prev_obj))
