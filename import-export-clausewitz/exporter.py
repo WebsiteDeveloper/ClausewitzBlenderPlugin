@@ -16,6 +16,13 @@ class PdxFileExporter:
     def export_mesh(self, name):
         objects = []
 
+        eul = mathutils.Euler((0.0, 0.0, math.radians(180.0)), 'XYZ')
+        eul2 = mathutils.Euler((math.radians(90.0), 0.0, 0.0), 'XYZ')
+        mat_rot = eul.to_matrix() * eul2.to_matrix()
+        mat_rot.invert_safe()
+
+        transform_mat = bpy.data.objects[name].matrix_world * mat_rot.to_4x4()
+
         objects.append(pdx_data.PdxAsset())
 
         world = pdx_data.PdxWorld([])
@@ -33,7 +40,10 @@ class PdxFileExporter:
         bm = bmesh.new()
         bm.from_mesh(blender_mesh)
         bmesh.ops.triangulate(bm, faces=bm.faces)
-        bm.verts.ensure_lookup_table()
+
+        for vert in bm.verts:
+            vert.co = vert.co * transform_mat
+
         bm.verts.index_update()
         bm.faces.index_update()
         bm.verts.ensure_lookup_table()
@@ -43,9 +53,9 @@ class PdxFileExporter:
         tangents = []
 
         for i in range(0, len(bm.verts)):
-            verts.append(bm.verts[i].co * bpy.data.objects[name].matrix_world)
+            verts.append(bm.verts[i].co)
             bm.verts[i].normal_update()
-            normal_temp = bm.verts[i].normal * bpy.data.objects[name].matrix_world
+            normal_temp = bm.verts[i].normal
             normal_temp.normalize()
             normals.append(normal_temp)
 

@@ -1,5 +1,7 @@
 import bpy
 import bmesh
+import mathutils
+import math
 import os
 import io
 from pathlib import Path
@@ -11,6 +13,10 @@ class PdxFileImporter:
         self.file.read()
 
     def import_mesh(self):
+        eul = mathutils.Euler((0.0, 0.0, math.radians(180.0)), 'XYZ')
+        eul2 = mathutils.Euler((math.radians(90.0), 0.0, 0.0), 'XYZ')
+        mat_rot = eul.to_matrix() * eul2.to_matrix()
+
         shape = self.file.nodes[1].objects[0]
 
         mesh_name = shape.name # + "_mesh"
@@ -27,6 +33,9 @@ class PdxFileImporter:
 
         bm = bmesh.new()
         bm.from_mesh(mesh)
+
+        for vert in bm.verts:
+            vert.co = vert.co * mat_rot
 
         bm.verts.ensure_lookup_table()
         bm.verts.index_update()
@@ -82,4 +91,4 @@ class PdxFileImporter:
             bpy.context.scene.objects.link(o)
             o.empty_draw_size = 2
             o.empty_draw_type = 'PLAIN_AXES'
-            o.location = (locators[i].pos[0], locators[i].pos[1], locators[i].pos[2])
+            o.location = mathutils.Vector((locators[i].pos[0], locators[i].pos[1], locators[i].pos[2])) * mat_rot
