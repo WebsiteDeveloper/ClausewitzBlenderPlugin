@@ -57,6 +57,9 @@ class PdxFileExporter:
             bm.verts[i].normal_update()
             normal_temp = bm.verts[i].normal
             normal_temp.normalize()
+            temp_y = normal_temp[1]
+            normal_temp[1] = normal_temp[2]
+            normal_temp[2] = temp_y
             normals.append(normal_temp)
 
         bm.faces.ensure_lookup_table()
