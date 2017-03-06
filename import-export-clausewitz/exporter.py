@@ -55,18 +55,14 @@ class PdxFileExporter:
         for i in range(0, len(bm.verts)):
             verts.append(bm.verts[i].co)
             bm.verts[i].normal_update()
-            normal_temp = bm.verts[i].normal
+            normal_temp = bm.verts[i].normal * transform_mat
             normal_temp.normalize()
-            temp_y = normal_temp[1]
-            normal_temp[1] = normal_temp[2]
-            normal_temp[2] = temp_y
+            #temp_y = normal_temp[1]
+            #normal_temp[1] = normal_temp[2]
+            #normal_temp[2] = temp_y
             normals.append(normal_temp)
 
         bm.faces.ensure_lookup_table()
-
-        for i in range(0, len(bm.verts)):
-            tangents.append((0.0, 0.0, 0.0, 0.0))
-
         bm.verts.ensure_lookup_table()
         bm.verts.index_update()
         bm.faces.index_update()
@@ -84,6 +80,14 @@ class PdxFileExporter:
                 uv_coords[loop.vert.index][1] = 1 - uv_coords[loop.vert.index][1]
 
         max_index = 0
+
+        bm.faces.ensure_lookup_table()
+        bm.verts.ensure_lookup_table()
+        bm.verts.index_update()
+        bm.faces.index_update()
+
+        for i in range(0, len(bm.verts)):
+            tangents.append(bm.verts[i].link_faces[0].calc_tangent_vert_diagonal().to_4d() * transform_mat)#(0.0, 0.0, 0.0, 0.0))
 
         #Trim data, remove empty bytes
         for i in range(0, len(uv_coords)):

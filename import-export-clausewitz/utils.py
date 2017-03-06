@@ -89,6 +89,17 @@ def TranslatePropertyName(originalName: str):
 
     return originalName
 
+def TransposeCoordinateArray4D(data):
+    result = []
+
+    if len(data) % 4 == 0:
+        for i in my_range(0, len(data) - 4, 4):
+            result.append((data[i], data[i + 1], data[i + 2], data[i + 3]))
+
+        return result
+    else:
+        return result
+
 def TransposeCoordinateArray3D(data):
     result = []
 
