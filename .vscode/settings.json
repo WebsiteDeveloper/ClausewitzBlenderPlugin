@@ -24,7 +24,7 @@
                 "exclude": ["*.zip"],
                 "deployOnSave": false,
                 "deployOnChange": false,
-                "isHidden": true
+                "isHidden": false
             }
         ],
         "targets": [
