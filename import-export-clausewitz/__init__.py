@@ -8,7 +8,7 @@ bl_info = {
     "name": "Clausewitz Import/Export",
     "category": "Import-Export",
     "author": "Bernhard Sirlinger",
-    "version": (0, 4, 0),
+    "version": (0, 5, 0),
     "blender": (2, 78, 0),
     "support": "COMMUNITY",
     "wiki_url": "https://github.com/WebsiteDeveloper/ClausewitzBlenderPlugin/wiki",
