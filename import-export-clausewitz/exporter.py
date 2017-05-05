@@ -108,12 +108,20 @@ class PdxFileExporter:
 
             faces.append(temp)
 
+        bb_min = [math.inf, math.inf, math.inf]
+        bb_max = [-math.inf, -math.inf, -math.inf]
+
+        for i in range(0, len(verts)):
+            for j in range(3):
+                bb_min[j] = min([verts[i][j], bb_min[j]])
+                bb_max[j] = max([verts[i][j], bb_max[j]])
+
         mesh.verts = verts
         mesh.normals = normals
         mesh.tangents = tangents
         mesh.uv_coords = uv_coords
         mesh.faces = faces
-        mesh.meshBounds = pdx_data.PdxBounds((0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
+        mesh.meshBounds = pdx_data.PdxBounds(bb_min, bb_max)
         mesh.material = pdx_data.PdxMaterial()
 
         diff_file = ""

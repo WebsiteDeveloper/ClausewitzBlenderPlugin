@@ -47,6 +47,7 @@ class PdxFile():
             name += buffer.NextChar()
 
         name = utils.TranslatePropertyName(name)
+        print("Property: " + name)
 
         char = buffer.NextChar()
 
@@ -54,7 +55,9 @@ class PdxFile():
             data_count = buffer.NextUInt32()
 
             for i in range(0, data_count):
-                property_data.append(buffer.NextInt32())
+                temp = buffer.NextInt32()
+                property_data.append(temp)
+                #print("Integer: " + str(temp))
 
             if name == "pdxasset":
                 print(property_data)
@@ -62,13 +65,17 @@ class PdxFile():
             data_count = buffer.NextUInt32()
 
             for i in range(0, data_count):
-                property_data.append(buffer.NextFloat32())
+                temp = buffer.NextFloat32()
+                property_data.append(temp)
+                #if name == "min" or name == "max":
+                    #print("Float: " + str(temp))
         elif char == "s":
             value = ""
             stringType = buffer.NextUInt32()
             dataCount = buffer.NextUInt32()
 
             value = utils.ReadNullByteString(buffer)
+            #print("String: " + value)
 
             property_data = value
 
@@ -99,6 +106,7 @@ class PdxFile():
             return self.read_object(buffer, depth_temp, prev_obj)
         else:
             object_name = char + utils.ReadNullByteString(buffer)
+            #print((" " * depth) + "Object Name: " + object_name)
 
             if object_name == "object":
                 result = PdxWorld(sub_objects)
@@ -212,11 +220,20 @@ class PdxMesh():
 
         print(len(self.tangents) * 4)
 
+        """
+
         for i in range(0, len(self.tangents)):
             result.extend(struct.pack("f", self.tangents[i][0]))
             result.extend(struct.pack("f", self.tangents[i][1]))
             result.extend(struct.pack("f", self.tangents[i][2]))
             result.extend(struct.pack("f", self.tangents[i][3]))
+
+        """
+
+        for i in range(0, len(self.tangents)):
+            for j in range(0, 4):
+                result.extend(struct.pack("f", self.tangents[i][j]))
+            
 
         result.extend(struct.pack("cb3s", b'!', 2, b'u0f'))
         result.extend(struct.pack("I", len(self.uv_coords) * 2))
@@ -359,7 +376,7 @@ class PdxLocator():
 
         result.extend(struct.pack("2s", b'[['))
         result.extend(struct.pack(str(len(self.name)) + "sb", self.name.encode('UTF-8'), 0))
-        result.extend(struct.pack("cb2sifff", b'!', 1, b'pf', 3, self.pos[0], self.pos[1], self.pos[2]))
+        result.extend(struct.pack("cb2sifff", b'!', 1, b'pf', 3, -self.pos[0], self.pos[2], self.pos[1]))
         result.extend(struct.pack("cb2sifff", b'!', 1, b'qf', 3, 0.0, 0.0, 0.0))
 
         return result
