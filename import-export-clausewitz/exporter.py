@@ -14,6 +14,8 @@ class PdxFileExporter:
         self.filename = filename
 
     def export_mesh(self, name):
+        print("Name: " + str(name))
+
         objects = []
 
         eul = mathutils.Euler((0.0, 0.0, math.radians(180.0)), 'XYZ')
@@ -87,7 +89,10 @@ class PdxFileExporter:
         bm.faces.index_update()
 
         for i in range(0, len(bm.verts)):
-            tangents.append(bm.verts[i].link_faces[0].calc_tangent_vert_diagonal().to_4d() * transform_mat)#(0.0, 0.0, 0.0, 0.0))
+            if len(bm.verts[i].link_faces) > 0:#For Models with stray vertices...
+                tangents.append(bm.verts[i].link_faces[0].calc_tangent_vert_diagonal().to_4d() * transform_mat)#(0.0, 0.0, 0.0, 0.0))
+            else:
+                tangents.append((0.0, 0.0, 0.0, 0.0))
 
         #Trim data, remove empty bytes
         for i in range(0, len(uv_coords)):
