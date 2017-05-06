@@ -144,6 +144,70 @@ class PdxFileExporter:
         mesh.material.specs = "test_spec"
         mesh.material.normals = "test_normal"
 
+        #Collision Mesh
+        collisionObject = None
+        collisionShape = None
+
+        for o in bpy.data.objects:
+            if o.type == "MESH" and o.draw_type == "WIRE":
+                collisionObject = o
+
+        if collisionObject is None:
+            print("WARNING ::: No Collision Mesh found. Only using Bounding Box!")
+        else:
+            print("Collision Shape Name: " + collisionObject.name)
+            collisionShape = pdx_data.PdxShape(collisionObject.name)
+
+            collisionMesh = pdx_data.PdxCollisionMesh()
+            collisionShape.mesh = collisionMesh
+
+            collision_blender_mesh = bpy.data.meshes[collisionObject.name]
+
+            cbm = bmesh.new()
+            cbm.from_mesh(collision_blender_mesh)
+            bmesh.ops.triangulate(cbm, faces=cbm.faces)
+
+            for vert in cbm.verts:
+                vert.co = vert.co * transform_mat
+
+            cbm.verts.index_update()
+            cbm.faces.index_update()
+            cbm.verts.ensure_lookup_table()
+
+            cverts = []
+
+            for i in range(0, len(cbm.verts)):
+                cverts.append(cbm.verts[i].co)
+
+            cbm.faces.ensure_lookup_table()
+            cbm.verts.ensure_lookup_table()
+            cbm.verts.index_update()
+            cbm.faces.index_update()
+
+            cfaces = []
+
+            for face in cbm.faces:
+                temp = []
+
+                for loop in face.loops:
+                    temp.append(loop.vert.index)
+
+                cfaces.append(temp)
+
+            cbb_min = [math.inf, math.inf, math.inf]
+            cbb_max = [-math.inf, -math.inf, -math.inf]
+
+            for i in range(0, len(cverts)):
+                for j in range(3):
+                    cbb_min[j] = min([cverts[i][j], cbb_min[j]])
+                    cbb_max[j] = max([cverts[i][j], cbb_max[j]])
+
+            collisionMesh.verts = cverts
+            collisionMesh.faces = cfaces
+            collisionMesh.meshBounds = pdx_data.PdxBounds(cbb_min, cbb_max)
+            collisionMesh.material = pdx_data.PdxCollisionMaterial()
+
+        #Locators Stuff
         locators_array = []
 
         for i in range(0, len(bpy.data.objects)):
@@ -155,6 +219,8 @@ class PdxFileExporter:
         locators.locators = locators_array
 
         world.objects.append(shape)
+        if not(collisionShape is None):
+            world.objects.append(collisionShape)
         world.objects.append(locators)
         objects.append(world)
 

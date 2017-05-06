@@ -60,7 +60,7 @@ class PdxFile():
                 #print("Integer: " + str(temp))
 
             if name == "pdxasset":
-                print(property_data)
+                print("PDXAsset: " + str(property_data))
         elif char == "f":
             data_count = buffer.NextUInt32()
 
@@ -106,7 +106,7 @@ class PdxFile():
             return self.read_object(buffer, depth_temp, prev_obj)
         else:
             object_name = char + utils.ReadNullByteString(buffer)
-            #print((" " * depth) + "Object Name: " + object_name)
+            print((" " * ((depth - 1) * 4)) + "Object Name: " + object_name)
 
             if object_name == "object":
                 result = PdxWorld(sub_objects)
@@ -140,34 +140,56 @@ class PdxFile():
             if object_name == "object":
                 result = PdxWorld(sub_objects)
             elif object_name == "mesh":
-                result = PdxMesh()
-                result.verts = utils.TransposeCoordinateArray3D(object_properties[0].value)
-                print("Verts: " + str(len(object_properties[0].value)))
-                result.faces = utils.TransposeCoordinateArray3D(object_properties[4].value)
-                print("Faces: " + str(len(object_properties[4].value)))
-                result.normals = utils.TransposeCoordinateArray3D(object_properties[1].value)
-                print("Normals: " + str(len(object_properties[1].value)))
-                result.tangents = object_properties[2].value
-                print("Tangents: " + str(len(object_properties[2].value)))
-                result.uv_coords = utils.TransposeCoordinateArray2D(object_properties[3].value)
-                print("UV-Map: " + str(len(object_properties[3].value)))
-                result.meshBounds = sub_objects[0]
-                result.material = sub_objects[1]
+                if len(object_properties) == 2:
+                    result = PdxCollisionMesh()
+                    result.verts = utils.TransposeCoordinateArray3D(object_properties[0].value)
+                    #print("Verts: " + str(len(object_properties[0].value)))
+                    result.faces = utils.TransposeCoordinateArray3D(object_properties[1].value)
+                    #print("Faces: " + str(len(object_properties[1].value)))
+                    result.meshBounds = sub_objects[0]
+                    result.material = sub_objects[1]
+                elif len(object_properties) == 5:
+                    result = PdxMesh()
+                    result.verts = utils.TransposeCoordinateArray3D(object_properties[0].value)
+                    #print("Verts: " + str(len(object_properties[0].value)))
+                    result.faces = utils.TransposeCoordinateArray3D(object_properties[4].value)
+                    #print("Faces: " + str(len(object_properties[4].value)))
+                    result.normals = utils.TransposeCoordinateArray3D(object_properties[1].value)
+                    #print("Normals: " + str(len(object_properties[1].value)))
+                    result.tangents = object_properties[2].value
+                    #print("Tangents: " + str(len(object_properties[2].value)))
+                    result.uv_coords = utils.TransposeCoordinateArray2D(object_properties[3].value)
+                    #print("UV-Map: " + str(len(object_properties[3].value)))
+                    result.meshBounds = sub_objects[0]
+                    result.material = sub_objects[1]
+                else:
+                    print("ERROR ::: Invalid Mesh-Property Count! (" + str(len(object_properties)) + ")")
             elif object_name == "locator":
                 result = PdxLocators()
                 result.locators = sub_objects
             elif object_name == "aabb":
                 result = PdxBounds(object_properties[0].value, object_properties[1].value)
             elif object_name == "material":
-                result = PdxMaterial()
-                result.shaders = object_properties[0].value
-                result.diffs = object_properties[1].value
-                result.normals = object_properties[2].value
-                result.specs = object_properties[3].value
+                if len(object_properties) == 1:
+                    print("PdxCollisionMaterial")
+                    result = PdxCollisionMaterial()
+                    result.shaders = object_properties[0].value
+                    if result.shaders != "Collision":
+                        print("Error! ::: Collision Shader not set Correctly!")
+                elif len(object_properties) == 4:
+                    result = PdxMaterial()
+                    result.shaders = object_properties[0].value
+                    result.diffs = object_properties[1].value
+                    result.normals = object_properties[2].value
+                    result.specs = object_properties[3].value
+                else:
+                    print("ERROR ::: Invalid Material-Property Count! (" + str(len(object_properties)) + ")")
             else:
+                print("Else: " + object_name)
                 if isinstance(prev_obj, PdxLocators):
                     result = PdxLocator(object_name, object_properties[0].value)
-                elif isinstance(prev_obj, PdxWorld) and object_name.endswith("MeshShape"):
+                elif isinstance(prev_obj, PdxWorld):# and object_name.endswith("MeshShape"):
+                    print("World contains: " + str(len(sub_objects)) + "|" + str(sub_objects))
                     result = PdxShape(object_name)
                     result.mesh = sub_objects[0]
                 else:
@@ -220,16 +242,6 @@ class PdxMesh():
 
         print(len(self.tangents) * 4)
 
-        """
-
-        for i in range(0, len(self.tangents)):
-            result.extend(struct.pack("f", self.tangents[i][0]))
-            result.extend(struct.pack("f", self.tangents[i][1]))
-            result.extend(struct.pack("f", self.tangents[i][2]))
-            result.extend(struct.pack("f", self.tangents[i][3]))
-
-        """
-
         for i in range(0, len(self.tangents)):
             for j in range(0, 4):
                 result.extend(struct.pack("f", self.tangents[i][j]))
@@ -243,6 +255,33 @@ class PdxMesh():
             result.extend(struct.pack("f", self.uv_coords[i][1]))
 
         print("UV-Map-Export: " + str(len(self.uv_coords)))
+
+        result.extend(struct.pack("cb4s", b'!', 3, b'trii'))
+        result.extend(struct.pack("I", len(self.faces) * 3))
+
+        for i in range(0, len(self.faces)):
+            result.extend(struct.pack("III", self.faces[i][0],  self.faces[i][1],  self.faces[i][2]))
+
+        result.extend(self.meshBounds.get_binary_data())
+        result.extend(self.material.get_binary_data())
+
+        return result
+
+class PdxCollisionMesh():
+    def __init__(self):
+        self.meshBounds = None
+        self.verts = []
+        self.faces = []
+        self.material = None
+
+    def get_binary_data(self):
+        result = bytearray()
+
+        result.extend(struct.pack("7sb", b'[[[mesh', 0))
+        result.extend(struct.pack("cb2sI", b'!', 1, b'pf', len(self.verts) * 3))
+
+        for i in range(0, len(self.verts)):
+            result.extend(struct.pack("fff", self.verts[i][0], self.verts[i][1], self.verts[i][2]))
 
         result.extend(struct.pack("cb4s", b'!', 3, b'trii'))
         result.extend(struct.pack("I", len(self.faces) * 3))
@@ -281,6 +320,20 @@ class PdxMaterial():
         result.extend(struct.pack("cb5s", b'!', 4, b'specs'))
         result.extend(struct.pack("II", 1, len(self.specs) + 1))
         result.extend(struct.pack(str(len(self.specs)) + "sb", self.specs.encode("UTF-8"), 0))
+
+        return result
+
+class PdxCollisionMaterial():
+    def __init__(self):
+        self.shaders = "Collision"
+
+    def get_binary_data(self):
+        result = bytearray()
+
+        result.extend(struct.pack("12sb", b'[[[[material', 0))
+        result.extend(struct.pack("cb7s", b'!', 6, b'shaders'))
+        result.extend(struct.pack("II", 1, len(self.shaders) + 1))
+        result.extend(struct.pack(str(len(self.shaders)) + "sb", self.shaders.encode("UTF-8"), 0))
 
         return result
 
