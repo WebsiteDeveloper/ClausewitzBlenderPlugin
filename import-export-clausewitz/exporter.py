@@ -137,8 +137,7 @@ class PdxFileExporter:
                     if mtex_slot:
                         if hasattr(mtex_slot.texture, 'image'):
                             if mtex_slot.texture.image is None:
-                                bpy.ops.error.message('INVOKE_SCREEN',
-                                                      message="The Texture Image file is not loaded")
+                                bpy.ops.error.message('INVOKE_SCREEN', message="The Texture Image file is not loaded")
                             else:
                                 diff_file = os.path.basename(mtex_slot.texture.image.filepath)
         else:
@@ -217,14 +216,14 @@ class PdxFileExporter:
 
         for i in range(0, len(bpy.data.objects)):
             if bpy.data.objects[i].type == 'EMPTY':
-                temp = pdx_data.PdxLocator(bpy.data.objects[i].name, bpy.data.objects[i].location)
+                temp = pdx_data.PdxLocator(bpy.data.objects[i].name, bpy.data.objects[i].location * transform_mat)
                 locators_array.append(temp)
 
         locators = pdx_data.PdxLocators()
         locators.locators = locators_array
 
         world.objects.append(shape)
-        if not(collisionShape is None):
+        if collisionShape is not None:
             world.objects.append(collisionShape)
         world.objects.append(locators)
         objects.append(world)

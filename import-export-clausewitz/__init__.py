@@ -8,7 +8,7 @@ bl_info = {
     "name": "Clausewitz Import/Export",
     "category": "Import-Export",
     "author": "Bernhard Sirlinger",
-    "version": (0, 5, 0),
+    "version": (0, 6, 0),
     "blender": (2, 78, 0),
     "support": "COMMUNITY",
     "wiki_url": "https://github.com/WebsiteDeveloper/ClausewitzBlenderPlugin/wiki",
@@ -57,7 +57,7 @@ class ClausewitzImporter(Operator, ImportHelper):
         pdx = importer.PdxFileImporter(self.filepath)
         pdx.import_mesh()
 
-        return {'FINISHED'}      
+        return {'FINISHED'}
 
 #
 #   The error message operator. When invoked, pops up a dialog 
@@ -67,16 +67,16 @@ class MessageOperator(bpy.types.Operator):
     bl_idname = "error.message"
     bl_label = "Message"
     message = StringProperty(name="")
- 
+
     def execute(self, context):
         self.report({'INFO'}, self.message)
         print(self.message)
         return {'FINISHED'}
- 
+
     def invoke(self, context, event):
         wm = context.window_manager
         return wm.invoke_popup(self, width=500, height=500)
- 
+
     def draw(self, context):
         self.layout.alignment = 'CENTER'
         self.layout.label("Message")
@@ -85,7 +85,7 @@ class MessageOperator(bpy.types.Operator):
         row = self.layout.row()
         row.alignment = 'CENTER'
         row.operator("error.ok")
- 
+
 #
 #   The OK button in the error dialog
 #
