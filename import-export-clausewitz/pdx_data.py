@@ -137,7 +137,7 @@ class PdxFile():
                 result = PdxWorld(sub_objects)
             elif object_name == "mesh":
                 if len(object_properties) == 2:
-                    result = PdxCollisionMesh()
+                    result = PdxMesh()
                     result.verts = utils.TransposeCoordinateArray3D(object_properties[0].value)
                     #print("Verts: " + str(len(object_properties[0].value)))
                     result.faces = utils.TransposeCoordinateArray3D(object_properties[1].value)
@@ -168,10 +168,10 @@ class PdxFile():
             elif object_name == "material":
                 if len(object_properties) == 1:
                     print("PdxCollisionMaterial")
-                    result = PdxCollisionMaterial()
+                    result = PdxMaterial()
                     result.shaders = object_properties[0].value
                     if result.shaders != "Collision":
-                        print("Error! ::: Collision Shader not set Correctly!")
+                        print("ERROR ::: Collision Shader not set Correctly!")
                 elif len(object_properties) == 4:
                     result = PdxMaterial()
                     result.shaders = object_properties[0].value
@@ -211,145 +211,6 @@ class PdxAsset():
         print(result)
         return result
 
-class PdxMesh():
-    def __init__(self):
-        self.meshBounds = None
-        self.verts = []
-        self.faces = []
-        self.tangents = []
-        self.normals = []
-        self.uv_coords = []
-        self.material = None
-
-    def get_binary_data(self):
-        """Returns the Byte encoded Object Data"""
-        result = bytearray()
-
-        result.extend(struct.pack("7sb", b'[[[mesh', 0))
-        result.extend(struct.pack("cb2sI", b'!', 1, b'pf', len(self.verts) * 3))
-
-        for i in range(0, len(self.verts)):
-            result.extend(struct.pack("fff", self.verts[i][0], self.verts[i][1], self.verts[i][2]))
-
-        result.extend(struct.pack("cb2sI", b'!', 1, b'nf', len(self.normals) * 3))
-
-        for i in range(0, len(self.normals)):
-            result.extend(struct.pack("fff", self.normals[i][0], self.normals[i][1], self.normals[i][2]))
-
-        result.extend(struct.pack("cb3s", b'!', 2, b'taf'))
-        result.extend(struct.pack("I", len(self.tangents) * 4))
-
-        print(len(self.tangents) * 4)
-
-        for i in range(0, len(self.tangents)):
-            for j in range(0, 4):
-                result.extend(struct.pack("f", self.tangents[i][j]))
-            
-
-        result.extend(struct.pack("cb3s", b'!', 2, b'u0f'))
-        result.extend(struct.pack("I", len(self.uv_coords) * 2))
-
-        for i in range(0, len(self.uv_coords)):
-            result.extend(struct.pack("f", self.uv_coords[i][0]))
-            result.extend(struct.pack("f", self.uv_coords[i][1]))
-
-        print("UV-Map-Export: " + str(len(self.uv_coords)))
-
-        result.extend(struct.pack("cb4s", b'!', 3, b'trii'))
-        result.extend(struct.pack("I", len(self.faces) * 3))
-
-        for i in range(0, len(self.faces)):
-            result.extend(struct.pack("III", self.faces[i][0],  self.faces[i][1],  self.faces[i][2]))
-
-        result.extend(self.meshBounds.get_binary_data())
-        result.extend(self.material.get_binary_data())
-
-        return result
-
-class PdxCollisionMesh():
-    def __init__(self):
-        self.meshBounds = None
-        self.verts = []
-        self.faces = []
-        self.material = None
-
-    def get_binary_data(self):
-        """Returns the Byte encoded Object Data"""
-        result = bytearray()
-
-        result.extend(struct.pack("7sb", b'[[[mesh', 0))
-        result.extend(struct.pack("cb2sI", b'!', 1, b'pf', len(self.verts) * 3))
-
-        for i in range(0, len(self.verts)):
-            result.extend(struct.pack("fff", self.verts[i][0], self.verts[i][1], self.verts[i][2]))
-
-        result.extend(struct.pack("cb4s", b'!', 3, b'trii'))
-        result.extend(struct.pack("I", len(self.faces) * 3))
-
-        for i in range(0, len(self.faces)):
-            result.extend(struct.pack("III", self.faces[i][0],  self.faces[i][1],  self.faces[i][2]))
-
-        result.extend(self.meshBounds.get_binary_data())
-        result.extend(self.material.get_binary_data())
-
-        return result
-
-class PdxMaterial():
-    def __init__(self):
-        self.shaders = ""
-        self.diffs = ""
-        self.normals = ""
-        self.specs = ""
-
-    def get_binary_data(self):
-        """Returns the Byte encoded Object Data"""
-        result = bytearray()
-
-        result.extend(struct.pack("12sb", b'[[[[material', 0))
-        result.extend(struct.pack("cb7s", b'!', 6, b'shaders'))
-        result.extend(struct.pack("II", 1, len(self.shaders) + 1))
-        result.extend(struct.pack(str(len(self.shaders)) + "sb", self.shaders.encode("UTF-8"), 0))
-
-        result.extend(struct.pack("cb5s", b'!', 4, b'diffs'))
-        result.extend(struct.pack("II", 1, len(self.diffs) + 1))
-        result.extend(struct.pack(str(len(self.diffs)) + "sb", self.diffs.encode("UTF-8"), 0))
-
-        result.extend(struct.pack("cb2s", b'!', 1, b'ns'))
-        result.extend(struct.pack("II", 1, len(self.normals) + 1))
-        result.extend(struct.pack(str(len(self.normals)) + "sb", self.normals.encode("UTF-8"), 0))
-
-        result.extend(struct.pack("cb5s", b'!', 4, b'specs'))
-        result.extend(struct.pack("II", 1, len(self.specs) + 1))
-        result.extend(struct.pack(str(len(self.specs)) + "sb", self.specs.encode("UTF-8"), 0))
-
-        return result
-
-class PdxCollisionMaterial():
-    def __init__(self):
-        self.shaders = "Collision"
-
-    def get_binary_data(self):
-        """Returns the Byte encoded Object Data"""
-        result = bytearray()
-
-        result.extend(struct.pack("12sb", b'[[[[material', 0))
-        result.extend(struct.pack("cb7s", b'!', 6, b'shaders'))
-        result.extend(struct.pack("II", 1, len(self.shaders) + 1))
-        result.extend(struct.pack(str(len(self.shaders)) + "sb", self.shaders.encode("UTF-8"), 0))
-
-        return result
-
-class PdxProperty():
-    """Temporary class to hold the Values of a parsed Property until it gets mapped to the object"""
-    def __init__(self, name, bounds):
-        self.name = name
-        self.bounds = bounds
-        self.value = []
-
-    def get_binary_data(self):
-        """Returns the Byte encoded Object Data"""
-        return bytearray()
-
 class PdxWorld():
     def __init__(self, objects):
         self.objects = objects
@@ -362,7 +223,7 @@ class PdxWorld():
 
         for i in range(0, len(self.objects)):
             result.extend(self.objects[i].get_binary_data())
-
+        
         return result
 
 class PdxShape():
@@ -371,13 +232,128 @@ class PdxShape():
         self.mesh = None
 
     def get_binary_data(self):
-        """Returns the Byte encoded Object Data"""
         result = bytearray()
 
         result.extend(struct.pack("2s", b'[['))
         result.extend(struct.pack(str(len(self.name)) + "sb", self.name.encode('UTF-8'), 0))
-
+        
         result.extend(self.mesh.get_binary_data())
+
+        return result
+
+class PdxMesh():
+    def __init__(self):
+        self.verts = []
+        self.faces = []
+
+        self.tangents = []
+        self.normals = []
+        self.uv_coords = []
+
+        self.meshBounds = None
+        self.material = None
+        self.skin = None
+
+    def get_binary_data(self):
+        """Returns the Byte encoded Object Data"""
+        result = bytearray()
+
+        result.extend(struct.pack("7sb", b'[[[mesh', 0))
+
+        if len(self.verts) > 0:
+            result.extend(struct.pack("cb2sI", b'!', 1, b'pf', len(self.verts) * 3))
+
+            for i in range(len(self.verts)):
+                for j in range(3):
+                    result.extend(struct.pack("f", self.verts[i][j]))
+        else:
+            print("ERROR ::: No Vertices found!")
+
+        if len(self.faces) > 0:
+            result.extend(struct.pack("cb4sI", b'!', 3, b'trii', len(self.faces) * 3))
+
+            for i in range(0, len(self.faces)):
+                for j in range(3):
+                    result.extend(struct.pack("I", self.faces[i][j]))
+        else:
+            print("ERROR ::: No Faces found!")
+
+        if len(self.normals) > 0:
+            result.extend(struct.pack("cb2sI", b'!', 1, b'nf', len(self.normals) * 3))
+
+            for i in range(len(self.normals)):
+                for j in range(3):
+                    result.extend(struct.pack("f", self.normals[i][j]))
+        else:
+            print("WARNING ::: No Normals found! (Ok for Collision Material)")
+
+        if len(self.tangents) > 0:
+            result.extend(struct.pack("cb3sI", b'!', 2, b'taf', len(self.tangents) * 4))
+
+            for i in range(len(self.tangents)):
+                for j in range(4):
+                    result.extend(struct.pack("f", self.tangents[i][j]))
+        else:
+            print("WARNING ::: No Tangents found! (Ok for Collision Material)")
+
+        if len(self.uv_coords) > 0:
+            result.extend(struct.pack("cb3sI", b'!', 2, b'u0f', len(self.uv_coords) * 2))
+
+            for i in range(len(self.uv_coords)):
+                for j in range(2):
+                    result.extend(struct.pack("f", self.uv_coords[i][j]))
+        else:
+            print("WARNING ::: No UV0 found! (Ok for Collision Material)")
+
+        if self.meshBounds is not None:
+            result.extend(self.meshBounds.get_binary_data())
+        else:
+            print("ERROR ::: No Mesh Bounds found!")
+
+        if self.material is not None:
+            result.extend(self.material.get_binary_data())
+        else:
+            print("ERROR ::: No Material found!")
+
+        if self.skin is not None:
+            result.extend(self.skin.get_binary_data())
+        else:
+            print("WARNING ::: No Skin found!")
+        
+        return result
+
+class PdxMaterial():
+    def __init__(self):
+        #Initialized to Collision for ease of use in exporter
+        self.shaders = "Collision"
+        self.diffs = ""
+        self.normals = ""
+        self.specs = ""
+
+    #Is implemented incomplete (Only 1 Texture)
+    def get_binary_data(self):
+        """Returns the Byte encoded Object Data"""
+        result = bytearray()
+
+        result.extend(struct.pack("12sb", b'[[[[material', 0))
+
+        result.extend(struct.pack("cb7s", b'!', 6, b'shaders'))
+        result.extend(struct.pack("II", 1, len(self.shaders) + 1))
+        result.extend(struct.pack(str(len(self.shaders)) + "sb", self.shaders.encode("UTF-8"), 0))
+        
+        if shaders != "Collision":
+
+            result.extend(struct.pack("cb5s", b'!', 4, b'diffs'))
+            result.extend(struct.pack("II", 1, len(self.diffs) + 1))
+            result.extend(struct.pack(str(len(self.diffs)) + "sb", self.diffs.encode("UTF-8"), 0))
+            
+            result.extend(struct.pack("cb2s", b'!', 1, b'ns'))
+            result.extend(struct.pack("II", 1, len(self.normals) + 1))
+            result.extend(struct.pack(str(len(self.normals)) + "sb", self.normals.encode("UTF-8"), 0))
+
+            result.extend(struct.pack("cb5s", b'!', 4, b'specs'))
+            result.extend(struct.pack("II", 1, len(self.specs) + 1))
+            result.extend(struct.pack(str(len(self.specs)) + "sb", self.specs.encode("UTF-8"), 0))
 
         return result
 
@@ -399,16 +375,26 @@ class PdxBounds():
 
         return result
 
-class PdxObject():
-    """Temporary object"""
-    def __init__(self, name, properties, depth):
-        self.name = name
-        self.properties = properties
-        self.depth = depth
+class PdxSkin():
+    def __init__(self, bonesPerVertice, indices, weight):
+        self.bonesPerVertice = bonesPerVertice
+        # Size of these arrays should be verticeCount * bonesPerVertice
+        self.indices = indices
+        self.weight = weight
 
     def get_binary_data(self):
-        """Returns the Byte encoded Object Data"""
-        return bytearray()
+        result = bytearray()
+
+        result.extend(struct.pack("8sb", b'[[[[skin', 0))
+
+        result.extend(struct.pack("cb4s", b'!', 2, b'ixf'))
+        for i in range(len(self.indices)):
+            result.extend(struct.pack("I", self.indices[i]))
+        result.extend(struct.pack("cb4s", b'!', 1, b'wf'))
+        for i in range(len(self.weight)):
+            result.extend(struct.pack("I", self.weight[i]))
+
+        return result
 
 class PdxLocators():
     def __init__(self):
@@ -442,4 +428,24 @@ class PdxLocator():
         result.extend(struct.pack("cb2sifff", b'!', 1, b'qf', 3, 0.0, 0.0, 0.0))
 
         return result
-    
+
+# Temporary objects
+class PdxObject():
+    """Temporary class to hold the Values of a parsed Object until it gets mapped to the object"""
+    def __init__(self, name, properties, depth):
+        self.name = name
+        self.properties = properties
+        self.depth = depth
+
+    def get_binary_data(self):
+        return bytearray()
+
+class PdxProperty():
+    """Temporary class to hold the Values of a parsed Property until it gets mapped to the object"""
+    def __init__(self, name, bounds):
+        self.name = name
+        self.bounds = bounds
+        self.value = []
+
+    def get_binary_data(self):
+        return bytearray()

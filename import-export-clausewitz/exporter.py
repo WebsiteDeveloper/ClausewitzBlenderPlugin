@@ -209,7 +209,7 @@ class PdxFileExporter:
             collisionMesh.verts = cverts
             collisionMesh.faces = cfaces
             collisionMesh.meshBounds = pdx_data.PdxBounds(cbb_min, cbb_max)
-            collisionMesh.material = pdx_data.PdxCollisionMaterial()
+            collisionMesh.material = pdx_data.PdxMaterial()
 
         #Locators Stuff
         locators_array = []
