@@ -84,6 +84,9 @@ class PdxFile():
         if name == "pdxasset":
             result = PdxAsset()
             result.bounds = (lower_bound, upper_bound)
+
+            if len(property_data) >= 2:
+                result.version = (property_data[0], property_data[1])
         else:
             result = PdxProperty(name, (lower_bound, upper_bound))
             result.value = property_data
@@ -184,7 +187,7 @@ class PdxFile():
                 print("Else: " + object_name)
                 if isinstance(prev_obj, PdxLocators):
                     result = PdxLocator(object_name, object_properties[0].value)
-                elif isinstance(prev_obj, PdxWorld):# and object_name.endswith("MeshShape"):
+                elif isinstance(prev_obj, PdxWorld):
                     print("World contains: " + str(len(sub_objects)) + "|" + str(sub_objects))
                     result = PdxShape(object_name)
                     result.mesh = sub_objects[0]
@@ -198,7 +201,7 @@ class PdxAsset():
     def __init__(self):
         self.bounds = (0, 0)
         self.name = "pdxasset"
-        self.value = 0
+        self.version = (0, 0) # Version x.y formated like (x, y)
 
     def get_binary_data(self):
         """Returns the Byte encoded Object Data"""
@@ -223,7 +226,7 @@ class PdxWorld():
 
         for i in range(0, len(self.objects)):
             result.extend(self.objects[i].get_binary_data())
-        
+
         return result
 
 class PdxShape():
@@ -236,7 +239,7 @@ class PdxShape():
 
         result.extend(struct.pack("2s", b'[['))
         result.extend(struct.pack(str(len(self.name)) + "sb", self.name.encode('UTF-8'), 0))
-        
+
         result.extend(self.mesh.get_binary_data())
 
         return result
@@ -340,13 +343,13 @@ class PdxMaterial():
         result.extend(struct.pack("cb7s", b'!', 6, b'shaders'))
         result.extend(struct.pack("II", 1, len(self.shaders) + 1))
         result.extend(struct.pack(str(len(self.shaders)) + "sb", self.shaders.encode("UTF-8"), 0))
-        
-        if shaders != "Collision":
+
+        if self.shaders != "Collision":
 
             result.extend(struct.pack("cb5s", b'!', 4, b'diffs'))
             result.extend(struct.pack("II", 1, len(self.diffs) + 1))
             result.extend(struct.pack(str(len(self.diffs)) + "sb", self.diffs.encode("UTF-8"), 0))
-            
+
             result.extend(struct.pack("cb2s", b'!', 1, b'ns'))
             result.extend(struct.pack("II", 1, len(self.normals) + 1))
             result.extend(struct.pack(str(len(self.normals)) + "sb", self.normals.encode("UTF-8"), 0))
