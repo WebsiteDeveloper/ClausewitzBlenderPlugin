@@ -43,18 +43,18 @@ class PdxFile():
 
         name_length = buffer.NextInt8()
 
-        for i in range(0, name_length):
+        for i in range(name_length):
             name += buffer.NextChar()
 
-        name = utils.TranslatePropertyName(name)
-        print("Property: " + name)
+        #name = utils.TranslatePropertyName(name) Umbenennen verwirrt nur!
+        #print("Property: " + name)
 
         char = buffer.NextChar()
 
         if char == "i":
             data_count = buffer.NextUInt32()
 
-            for i in range(0, data_count):
+            for i in range(data_count):
                 temp = buffer.NextInt32()
                 property_data.append(temp)
                 #print("Integer: " + str(temp))
@@ -64,7 +64,7 @@ class PdxFile():
         elif char == "f":
             data_count = buffer.NextUInt32()
 
-            for i in range(0, data_count):
+            for i in range(data_count):
                 temp = buffer.NextFloat32()
                 property_data.append(temp)
                 #if name == "min" or name == "max":
@@ -97,7 +97,7 @@ class PdxFile():
         sub_objects = []
 
         if char == "[":
-            depth_temp = 1
+            depth_temp = 0
 
             while buffer.NextChar(True) == '[':
                 buffer.NextChar()
@@ -106,12 +106,14 @@ class PdxFile():
             return self.read_object(buffer, depth_temp, prev_obj)
         else:
             object_name = char + utils.ReadNullByteString(buffer)
-            print((" " * ((depth - 1) * 4)) + "Object Name: " + object_name)
+            print((" "*depth) + "Object Name: " + object_name)
 
             if object_name == "object":
                 result = PdxWorld(sub_objects)
             elif object_name == "mesh":
                 result = PdxMesh()
+            elif object_name == "skeleton":
+                result = PdxSkeleton()
             elif object_name == "locator":
                 result = PdxLocators()
             else:
@@ -124,70 +126,123 @@ class PdxFile():
                     buffer.NextChar()
                     object_properties.append(self.read_property(buffer))
                 elif char == "[":
-                    if depth < utils.PreviewObjectDepth(buffer):
-                        if isinstance(prev_obj, PdxLocators) or isinstance(prev_obj, PdxMesh):
-                            sub_objects.append(self.read_object(buffer, 0, prev_obj))
-                        else:
-                            sub_objects.append(self.read_object(buffer, 0, result))
+                    nextDepth = utils.PreviewObjectDepth(buffer)
+                    if depth < nextDepth:
+                        sub_objects.append(self.read_object(buffer, 0, result))
                     else:
                         break
-
 
             if object_name == "object":
                 result = PdxWorld(sub_objects)
             elif object_name == "mesh":
-                if len(object_properties) == 2:
-                    result = PdxMesh()
-                    result.verts = utils.TransposeCoordinateArray3D(object_properties[0].value)
-                    #print("Verts: " + str(len(object_properties[0].value)))
-                    result.faces = utils.TransposeCoordinateArray3D(object_properties[1].value)
-                    #print("Faces: " + str(len(object_properties[1].value)))
-                    result.meshBounds = sub_objects[0]
-                    result.material = sub_objects[1]
-                elif len(object_properties) == 5:
-                    result = PdxMesh()
-                    result.verts = utils.TransposeCoordinateArray3D(object_properties[0].value)
-                    #print("Verts: " + str(len(object_properties[0].value)))
-                    result.faces = utils.TransposeCoordinateArray3D(object_properties[4].value)
-                    #print("Faces: " + str(len(object_properties[4].value)))
-                    result.normals = utils.TransposeCoordinateArray3D(object_properties[1].value)
-                    #print("Normals: " + str(len(object_properties[1].value)))
-                    result.tangents = object_properties[2].value
-                    #print("Tangents: " + str(len(object_properties[2].value)))
-                    result.uv_coords = utils.TransposeCoordinateArray2D(object_properties[3].value)
-                    #print("UV-Map: " + str(len(object_properties[3].value)))
-                    result.meshBounds = sub_objects[0]
-                    result.material = sub_objects[1]
-                else:
-                    print("ERROR ::: Invalid Mesh-Property Count! (" + str(len(object_properties)) + ")")
+                result = PdxMesh()
+
+                for o in sub_objects:
+                    if isinstance(o, PdxMaterial):
+                        result.material = o
+                    elif isinstance(o, PdxBounds):
+                        result.meshBounds = o
+                    elif isinstance(o, PdxSkin):
+                        result.skin = o
+                    else:
+                        print("ERROR ::: Mesh contains invalid Sub-Object: " + str(type(o)))
+
+                for p in object_properties:
+                    if p.name == "p":
+                        #print("Positions: " + str(len(p.value)) + " representing " + str(len(p.value) / 3) + " Vertices")
+                        result.verts = utils.TransposeCoordinateArray3D(p.value)
+                    elif p.name == "n":
+                        #print("Normals: " + str(len(p.value)) + " representing " + str(len(p.value) / 3) + " Vertices")
+                        result.normals = utils.TransposeCoordinateArray3D(p.value)
+                    elif p.name == "ta":
+                        #print("Tangents: " + str(len(p.value)) + " representing " + str(len(p.value) / 4) + " Vertices")
+                        result.tangents = p.value
+                    elif p.name == "u0": # u1, u2, u3 still not implemented
+                        #print("UV's: " + str(len(p.value)) + " representing " + str(len(p.value) / 2) + " Vertices")
+                        result.uv_coords = utils.TransposeCoordinateArray2D(p.value)
+                    elif p.name == "tri":
+                        #print("Indices: " + str(len(p.value)) + " representing " + str(len(p.value) / 3) + " Triangles")
+                        result.faces = utils.TransposeCoordinateArray3D(p.value)
+                    else:
+                        print("ERROR ::: Invalid Property in Mesh: \"" + p.name + "\"")
+            elif object_name == "aabb":
+                result = PdxBounds(object_properties[0].value, object_properties[1].value)
+            elif object_name == "skin":
+                result = PdxSkin()
+
+                if len(sub_objects) > 0:
+                    print("ERROR ::: " + str(len(sub_objects)) + " Sub Objects Found! (Skin)")
+
+                for p in object_properties:
+                    if p.name == "bones":
+                        if len(p.value) == 1:
+                            #print("Bones per Vertice: " + str(p.value[0]))
+                            result.bonesPerVertice = p.value[0]
+                        else:
+                            print("ERROR ::: Bones per Vertice has more than 1 Value")
+                    elif p.name == "ix":
+                        #print("Indices: " + str(len(p.value)))
+                        result.indices = p.value
+                    elif p.name == "w":
+                        #print("Weights: " + str(len(p.value)))
+                        result.weight = p.value
+                    else:
+                        print("ERROR ::: Invalid Property in Skin: \"" + p.name + "\"")
+            elif object_name == "material":
+                result = PdxMaterial()
+
+                if len(sub_objects) > 0:
+                    print("ERROR ::: " + str(len(sub_objects)) + " Sub Objects Found! (Material)")
+
+                for p in object_properties:
+                    if p.name == "shader":
+                        result.shader = p.value
+                    elif p.name == "diff":
+                        result.diff = p.value
+                    elif p.name == "n":
+                        result.normal = p.value
+                    elif p.name == "spec":
+                        result.spec = p.value
+                    else:
+                        print("ERROR ::: Invalid Property in Skin: \"" + p.name + "\"")
+            elif object_name == "skeleton":
+                result = PdxSkeleton()
+
+                #Needs Error Checkings
+                result.joints = sub_objects
+
+                if len(object_properties) > 0:
+                    print("ERROR ::: " + str(len(object_properties)) + " Object Parameters Found! (Skeleton)")
             elif object_name == "locator":
                 result = PdxLocators()
                 result.locators = sub_objects
-            elif object_name == "aabb":
-                result = PdxBounds(object_properties[0].value, object_properties[1].value)
-            elif object_name == "material":
-                if len(object_properties) == 1:
-                    print("PdxCollisionMaterial")
-                    result = PdxMaterial()
-                    result.shaders = object_properties[0].value
-                    if result.shaders != "Collision":
-                        print("ERROR ::: Collision Shader not set Correctly!")
-                elif len(object_properties) == 4:
-                    result = PdxMaterial()
-                    result.shaders = object_properties[0].value
-                    result.diffs = object_properties[1].value
-                    result.normals = object_properties[2].value
-                    result.specs = object_properties[3].value
-                else:
-                    print("ERROR ::: Invalid Material-Property Count! (" + str(len(object_properties)) + ")")
             else:
-                print("Else: " + object_name)
                 if isinstance(prev_obj, PdxLocators):
                     result = PdxLocator(object_name, object_properties[0].value)
-                elif isinstance(prev_obj, PdxWorld):# and object_name.endswith("MeshShape"):
-                    print("World contains: " + str(len(sub_objects)) + "|" + str(sub_objects))
+                elif isinstance(prev_obj, PdxWorld):
                     result = PdxShape(object_name)
-                    result.mesh = sub_objects[0]
+                    result.objects = sub_objects
+                elif isinstance(prev_obj, PdxSkeleton):
+                    result = PdxJoint(object_name)
+                    for p in object_properties:
+                        if p.name == "ix":
+                            if len(p.value) == 1:
+                                print("Joint Index: " + str(p.value[0]))
+                                result.index = p.value[0]
+                            else:
+                                print("ERROR ::: Joint Index has more than 1 Value")
+                        elif p.name == "pa":
+                            if len(p.value) == 1:
+                                print("Parent Index: " + str(p.value[0]))
+                                result.parent = p.value[0]
+                            else:
+                                print("ERROR ::: Parent Index has more than 1 Value")
+                        elif p.name == "tx":
+                            if len(p.value) == 12:
+                                result.transform = p.value
+                            else:
+                                print("ERROR ::: Joint Transform not 12 Values")
+
                 else:
                     result = PdxObject(object_name, object_properties, depth)
 
@@ -221,15 +276,15 @@ class PdxWorld():
 
         result.extend(struct.pack("7sb", b'[object', 0))
 
-        for i in range(0, len(self.objects)):
-            result.extend(self.objects[i].get_binary_data())
+        for o in range(len(self.objects)):
+            result.extend(o.get_binary_data())
         
         return result
 
 class PdxShape():
     def __init__(self, name):
         self.name = name
-        self.mesh = None
+        self.objects = None
 
     def get_binary_data(self):
         result = bytearray()
@@ -237,9 +292,48 @@ class PdxShape():
         result.extend(struct.pack("2s", b'[['))
         result.extend(struct.pack(str(len(self.name)) + "sb", self.name.encode('UTF-8'), 0))
         
-        result.extend(self.mesh.get_binary_data())
+        for o in self.objects:
+            result.extend(o.get_binary_data())
 
         return result
+
+class PdxSkeleton():
+    def __init__(self):
+        self.joints = []
+
+    def get_binary_data(self):
+        result = bytearray()
+
+        result.extend(struct.pack("11sb", b'[[[skeleton', 0))
+
+        for joint in self.joints:
+            result.extend(joint.get_binary_data())
+
+        return result
+
+class PdxJoint():
+    def __init__(self, name):
+        self.name = name
+        self.index = -1
+        self.parent = -1
+        self.transform = []
+
+    def get_binary_data(self):
+        result = bytearray()
+
+        result.extend(struct.pack("4s", b'[[[['))
+        result.extend(struct.pack(str(len(self.name)) + "sb", self.name.encode('UTF-8'), 0))
+
+        result.extend(struct.pack("cb3sII", b'!', 1, b'ixi', 1, self.index))
+        result.extend(struct.pack("cb3sII", b'!', 1, b'pai', 1, self.parent))
+
+        if len(transform) == 12:
+            result.extend(struct.pack("cb3sI", b'!', 1, b'pai', 12))
+            for t in transform:
+                result.extend(struct.pack("I",t))
+
+        return result
+
 
 class PdxMesh():
     def __init__(self):
@@ -272,7 +366,7 @@ class PdxMesh():
         if len(self.faces) > 0:
             result.extend(struct.pack("cb4sI", b'!', 3, b'trii', len(self.faces) * 3))
 
-            for i in range(0, len(self.faces)):
+            for i in range(len(self.faces)):
                 for j in range(3):
                     result.extend(struct.pack("I", self.faces[i][j]))
         else:
@@ -325,10 +419,10 @@ class PdxMesh():
 class PdxMaterial():
     def __init__(self):
         #Initialized to Collision for ease of use in exporter
-        self.shaders = "Collision"
+        self.shader = "Collision"
         self.diffs = ""
-        self.normals = ""
-        self.specs = ""
+        self.normal = ""
+        self.spec = ""
 
     #Is implemented incomplete (Only 1 Texture)
     def get_binary_data(self):
@@ -338,22 +432,22 @@ class PdxMaterial():
         result.extend(struct.pack("12sb", b'[[[[material', 0))
 
         result.extend(struct.pack("cb7s", b'!', 6, b'shaders'))
-        result.extend(struct.pack("II", 1, len(self.shaders) + 1))
-        result.extend(struct.pack(str(len(self.shaders)) + "sb", self.shaders.encode("UTF-8"), 0))
+        result.extend(struct.pack("II", 1, len(self.shader) + 1))
+        result.extend(struct.pack(str(len(self.shader)) + "sb", self.shader.encode("UTF-8"), 0))
         
-        if shaders != "Collision":
+        if self.shader != "Collision":
 
             result.extend(struct.pack("cb5s", b'!', 4, b'diffs'))
-            result.extend(struct.pack("II", 1, len(self.diffs) + 1))
-            result.extend(struct.pack(str(len(self.diffs)) + "sb", self.diffs.encode("UTF-8"), 0))
+            result.extend(struct.pack("II", 1, len(self.diff) + 1))
+            result.extend(struct.pack(str(len(self.diff)) + "sb", self.diff.encode("UTF-8"), 0))
             
             result.extend(struct.pack("cb2s", b'!', 1, b'ns'))
-            result.extend(struct.pack("II", 1, len(self.normals) + 1))
-            result.extend(struct.pack(str(len(self.normals)) + "sb", self.normals.encode("UTF-8"), 0))
+            result.extend(struct.pack("II", 1, len(self.normal) + 1))
+            result.extend(struct.pack(str(len(self.normal)) + "sb", self.normal.encode("UTF-8"), 0))
 
             result.extend(struct.pack("cb5s", b'!', 4, b'specs'))
-            result.extend(struct.pack("II", 1, len(self.specs) + 1))
-            result.extend(struct.pack(str(len(self.specs)) + "sb", self.specs.encode("UTF-8"), 0))
+            result.extend(struct.pack("II", 1, len(self.spec) + 1))
+            result.extend(struct.pack(str(len(self.spec)) + "sb", self.spec.encode("UTF-8"), 0))
 
         return result
 
@@ -376,11 +470,10 @@ class PdxBounds():
         return result
 
 class PdxSkin():
-    def __init__(self, bonesPerVertice, indices, weight):
-        self.bonesPerVertice = bonesPerVertice
-        # Size of these arrays should be verticeCount * bonesPerVertice
-        self.indices = indices
-        self.weight = weight
+    def __init__(self):
+        self.bonesPerVertice = 0
+        self.indices = []
+        self.weight = []
 
     def get_binary_data(self):
         result = bytearray()
@@ -407,7 +500,7 @@ class PdxLocators():
 
         result.extend(struct.pack("8sb", b'[locator', 0))
 
-        for i in range(0, len(self.locators)):
+        for i in range(len(self.locators)):
             result.extend(self.locators[i].get_binary_data())
 
         return result
@@ -424,6 +517,7 @@ class PdxLocator():
 
         result.extend(struct.pack("2s", b'[['))
         result.extend(struct.pack(str(len(self.name)) + "sb", self.name.encode('UTF-8'), 0))
+
         result.extend(struct.pack("cb2sifff", b'!', 1, b'pf', 3, self.pos[0], self.pos[1], self.pos[2]))
         result.extend(struct.pack("cb2sifff", b'!', 1, b'qf', 3, 0.0, 0.0, 0.0))
 

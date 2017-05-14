@@ -9,6 +9,8 @@ from . import (pdx_data, utils)
 
 class PdxFileImporter:
     def __init__(self, filename):
+        print("------------------------------------")
+        print("Importing: " + filename + "\n\n\n\n\n")
         self.file = pdx_data.PdxFile(filename)
         self.file.read()
 
@@ -17,117 +19,116 @@ class PdxFileImporter:
         eul2 = mathutils.Euler((math.radians(90.0), 0.0, 0.0), 'XYZ')
         mat_rot = eul.to_matrix() * eul2.to_matrix()
 
-        objectCount = len(self.file.nodes[1].objects)
-        obj = 0
+        for node in self.file.nodes:
+            if isinstance(node, pdx_data.PdxAsset):
+                print("Importer: PDXAsset")#TODOs
+            elif isinstance(node, pdx_data.PdxWorld):
+                for shape in node.objects:
+                    if isinstance(shape, pdx_data.PdxShape):
+                        name = shape.name
 
-        for v in self.file.nodes[1].objects:
-            if isinstance(v, pdx_data.PdxShape):
-                print(str(type(v.mesh.material)))
-                shader = v.mesh.material.shaders
-                print("Shader: " + shader)
-                if shader == "Collision":
-                    shape = v
-                    mesh_name = shape.name
+                        for shapeObject in shape.objects:
+                            if isinstance(shapeObject, pdx_data.PdxMesh):
+                                mesh = bpy.data.meshes.new(name)
+                                obj = bpy.data.objects.new(name, mesh)
+                                
+                                scn = bpy.context.scene
+                                scn.objects.link(obj)
+                                scn.objects.active = obj
+                                obj.select = True
+                                
+                                mesh.from_pydata(shapeObject.verts, [], shapeObject.faces)
 
-                    mesh = bpy.data.meshes.new(mesh_name)
-                    o = bpy.data.objects.new(shape.name, mesh)
+                                bm = bmesh.new()
+                                bm.from_mesh(mesh)
 
-                    o.parent = obj
-                    scn = bpy.context.scene
-                    scn.objects.link(o)
-                    scn.objects.active = o
-                    #o.select = True
-                    o.draw_type = "WIRE"
+                                for vert in bm.verts:
+                                    vert.co = vert.co * mat_rot
 
-                    mesh.from_pydata(shape.mesh.verts, [], shape.mesh.faces)
+                                bm.verts.ensure_lookup_table()
+                                bm.verts.index_update()
+                                bm.faces.index_update()
 
-                    bm = bmesh.new()
-                    bm.from_mesh(mesh)
+                                if shapeObject.material.shader == "Collision":
+                                    obj.draw_type = "WIRE"
+                                else:
+                                    uv_layer = bm.loops.layers.uv.new(name + "_uv")
 
-                    for vert in bm.verts:
-                        vert.co = vert.co * mat_rot
+                                    for face in bm.faces:
+                                        for loop in face.loops:
+                                            loop[uv_layer].uv[0] = shapeObject.uv_coords[loop.vert.index][0]
+                                            loop[uv_layer].uv[1] = 1 - shapeObject.uv_coords[loop.vert.index][1]
 
-                    bm.verts.ensure_lookup_table()
-                    bm.verts.index_update()
-                    bm.faces.index_update()
+                                    mat = bpy.data.materials.new(name=name + "_material")
+                                    obj.data.materials.append(mat)
 
-                    bm.to_mesh(mesh)
-                else:
-                    shape = v
+                                    tex = bpy.data.textures.new(shape.name + "_tex", 'IMAGE')
+                                    tex.type = 'IMAGE'
 
-                    mesh_name = shape.name # + "_mesh"
+                                    img_file = Path(os.path.join(os.path.dirname(self.file.filename), shapeObject.material.diffs))
+                                    altImageFile = Path(os.path.join(os.path.dirname(self.file.filename), os.path.basename(self.file.filename).replace(".mesh", "") + "_diffuse.dds"))
 
-                    mesh = bpy.data.meshes.new(mesh_name)
-                    obj = bpy.data.objects.new(shape.name, mesh)
+                                    if img_file.is_file():
+                                        img_file.resolve()
+                                        image = bpy.data.images.load(str(img_file))
+                                        tex.image = image
+                                    elif altImageFile.is_file():
+                                        altImageFile.resolve()
+                                        image = bpy.data.images.load(str(altImageFile))
+                                        tex.image = image
+                                    else:
+                                        print("No Texture File was found.")
 
-                    scn = bpy.context.scene
-                    scn.objects.link(obj)
-                    scn.objects.active = obj
-                    obj.select = True
+                                    slot = mat.texture_slots.add()
+                                    slot.texture = tex
+                                    slot.bump_method = 'BUMP_ORIGINAL'
+                                    slot.mapping = 'FLAT'
+                                    slot.mapping_x = 'X'
+                                    slot.mapping_y = 'Y'
+                                    slot.texture_coords = 'UV'
+                                    slot.use = True
+                                    slot.uv_layer = uv_layer.name
 
-                    mesh.from_pydata(shape.mesh.verts, [], shape.mesh.faces)
+                                bm.to_mesh(mesh)
+                            elif isinstance(shapeObject, pdx_data.PdxSkeleton):
+                                print("Importer: PdxSkeleton")
+                                amt = bpy.data.armatures.new(name)
+                                obj = bpy.data.objects.new(name, amt)
 
-                    bm = bmesh.new()
-                    bm.from_mesh(mesh)
+                                scn = bpy.context.scene
+                                scn.objects.active = obj
+                                obj.select = True
 
-                    for vert in bm.verts:
-                        vert.co = vert.co * mat_rot
+                                names = [""] * len(shapeObject.joints)
 
-                    bm.verts.ensure_lookup_table()
-                    bm.verts.index_update()
-                    bm.faces.index_update()
+                                for joint in shapeObject.joints:
+                                    print(joint.index)
+                                    names[joint.index] = joint.name
 
-                    uv_layer = bm.loops.layers.uv.new(shape.name + "_uv")
-                    for face in bm.faces:
-                        for loop in face.loops:
-                            loop[uv_layer].uv[0] = shape.mesh.uv_coords[loop.vert.index][0]
-                            loop[uv_layer].uv[1] = 1 - shape.mesh.uv_coords[loop.vert.index][1]
+                                bpy.ops.object.mode_set(mode='EDIT')
 
-                    mat = bpy.data.materials.new(name=shape.name + "_material")
-                    
-                    obj.data.materials.append(mat)
+                                for joint in shapeObject.joints:
+                                    bone = amt.edit_bones.new(joint.name)
 
-                    tex = bpy.data.textures.new(shape.name + "_tex", 'IMAGE')
-                    tex.type = 'IMAGE'
+                                    if joint.parent >= 0:
+                                        parent = parent = amt.edit_bones[names[joint.index]]
+                                        bone.parent = parent
+                                        bone.head = parent.tail
+                                        bone.use_connect = False
+                                    else:         
+                                        bone.head = (0,0,0)
 
-                    img_file = Path(os.path.join(os.path.dirname(self.file.filename), shape.mesh.material.diffs))
-                    altImageFile = Path(os.path.join(os.path.dirname(self.file.filename), os.path.basename(self.file.filename).replace(".mesh", "") + "_diffuse.dds"))
-
-                    if img_file.is_file():
-                        img_file.resolve()
-                        image = bpy.data.images.load(str(img_file))
-                        tex.image = image
-                    elif altImageFile.is_file():
-                        altImageFile.resolve()
-                        image = bpy.data.images.load(str(altImageFile))
-                        tex.image = image
+                                    bone.tail = (0, 0, 0)
+                            else:
+                                print("ERROR ::: Invalid Object in Shape: " + str(shapeObject))
                     else:
-                        print("No Texture File was found.")
-
-                    slot = mat.texture_slots.add()
-                    slot.texture = tex
-                    slot.bump_method = 'BUMP_ORIGINAL'
-                    slot.mapping = 'FLAT'
-                    slot.mapping_x = 'X'
-                    slot.mapping_y = 'Y'
-                    slot.texture_coords = 'UV'
-                    slot.use = True
-                    slot.uv_layer = uv_layer.name
-
-                    bm.to_mesh(mesh)
-            elif isinstance(v, pdx_data.PdxLocators):
-                if obj == 0:
-                    print("Error ::: Main Shape not initialized yet!")
-                #Locator Add Block
-                locators = v.locators
-                 
-                for i in range(0, len(v.locators)):
-                    o = bpy.data.objects.new(v.locators[i].name, None)
-                    o.parent = obj
-                    bpy.context.scene.objects.link(o)
-                    o.empty_draw_size = 2
-                    o.empty_draw_type = 'PLAIN_AXES'
-                    o.location = mathutils.Vector((v.locators[i].pos[0], v.locators[i].pos[1], v.locators[i].pos[2])) * mat_rot
-
+                        print("ERROR ::: Invalid Object in World: " + str(shape))
+            elif isinstance(node, pdx_data.PdxLocators):
+                for locator in node.locators:
+                    obj = bpy.data.objects.new(locator.name, None)
+                    bpy.context.scene.objects.link(obj)
+                    obj.empty_draw_size = 2
+                    obj.empty_draw_type = 'PLAIN_AXES'
+                    obj.location = mathutils.Vector((locator.pos[0], locator.pos[1], locator.pos[2])) * mat_rot
             else:
-                print("ERROR ::: Invalid Object!")
+                print("ERROR ::: Invalid node found: " + str(node))

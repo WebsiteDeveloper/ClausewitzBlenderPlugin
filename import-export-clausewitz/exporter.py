@@ -54,7 +54,7 @@ class PdxFileExporter:
         verts = []
         tangents = []
 
-        for i in range(0, len(bm.verts)):
+        for i in range(len(bm.verts)):
             verts.append(bm.verts[i].co)
             bm.verts[i].normal_update()
             normal_temp = bm.verts[i].normal * transform_mat
@@ -88,14 +88,14 @@ class PdxFileExporter:
         bm.verts.index_update()
         bm.faces.index_update()
 
-        for i in range(0, len(bm.verts)):
+        for i in range(len(bm.verts)):
             if len(bm.verts[i].link_faces) > 0:#For Models with stray vertices...
                 tangents.append(bm.verts[i].link_faces[0].calc_tangent_vert_diagonal().to_4d() * transform_mat)#(0.0, 0.0, 0.0, 0.0))
             else:
                 tangents.append((0.0, 0.0, 0.0, 0.0))
 
         #Trim data, remove empty bytes
-        for i in range(0, len(uv_coords)):
+        for i in range(len(uv_coords)):
             #print(uv_coords[i])
             if uv_coords[i][0] == 0.0 and uv_coords[i][1] == 0.0:
                 max_index = i - 1
@@ -116,7 +116,7 @@ class PdxFileExporter:
         bb_min = [math.inf, math.inf, math.inf]
         bb_max = [-math.inf, -math.inf, -math.inf]
 
-        for i in range(0, len(verts)):
+        for i in range(len(verts)):
             for j in range(3):
                 bb_min[j] = min([verts[i][j], bb_min[j]])
                 bb_max[j] = max([verts[i][j], bb_max[j]])
@@ -143,10 +143,10 @@ class PdxFileExporter:
         else:
             diff_file = os.path.basename(bpy.data.meshes[name].uv_textures[0].data[0].image.filepath)
 
-        mesh.material.shaders = "PdxMeshShip"
-        mesh.material.diffs = diff_file
-        mesh.material.specs = "test_spec"
-        mesh.material.normals = "test_normal"
+        mesh.material.shader = "PdxMeshShip"
+        mesh.material.diff = diff_file
+        mesh.material.spec = "test_spec"
+        mesh.material.normal = "test_normal"
 
         #Collision Mesh
         collisionObject = None
@@ -180,7 +180,7 @@ class PdxFileExporter:
 
             cverts = []
 
-            for i in range(0, len(cbm.verts)):
+            for i in range(len(cbm.verts)):
                 cverts.append(cbm.verts[i].co)
 
             cbm.faces.ensure_lookup_table()
@@ -201,7 +201,7 @@ class PdxFileExporter:
             cbb_min = [math.inf, math.inf, math.inf]
             cbb_max = [-math.inf, -math.inf, -math.inf]
 
-            for i in range(0, len(cverts)):
+            for i in range(len(cverts)):
                 for j in range(3):
                     cbb_min[j] = min([cverts[i][j], cbb_min[j]])
                     cbb_max[j] = max([cverts[i][j], cbb_max[j]])
@@ -214,7 +214,7 @@ class PdxFileExporter:
         #Locators Stuff
         locators_array = []
 
-        for i in range(0, len(bpy.data.objects)):
+        for i in range(len(bpy.data.objects)):
             if bpy.data.objects[i].type == 'EMPTY':
                 temp = pdx_data.PdxLocator(bpy.data.objects[i].name, bpy.data.objects[i].location * transform_mat)
                 locators_array.append(temp)
@@ -231,7 +231,7 @@ class PdxFileExporter:
         result_file = io.open(self.filename, 'wb')
 
         result_file.write(b'@@b@')
-        for i in range(0, len(objects)):
+        for i in range(len(objects)):
             result_file.write(objects[i].get_binary_data())
 
         result_file.close()
