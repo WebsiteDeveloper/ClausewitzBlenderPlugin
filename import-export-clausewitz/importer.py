@@ -18,6 +18,7 @@ class PdxFileImporter:
         eul = mathutils.Euler((0.0, 0.0, math.radians(180.0)), 'XYZ')
         eul2 = mathutils.Euler((math.radians(90.0), 0.0, 0.0), 'XYZ')
         mat_rot = eul.to_matrix() * eul2.to_matrix()
+        mat_rot.resize_4x4()
 
         for node in self.file.nodes:
             if isinstance(node, pdx_data.PdxAsset):
@@ -27,8 +28,72 @@ class PdxFileImporter:
                     if isinstance(shape, pdx_data.PdxShape):
                         name = shape.name
 
-                        for shapeObject in shape.objects:
-                            if isinstance(shapeObject, pdx_data.PdxMesh):
+                        if isinstance(shape.skeleton, pdx_data.PdxSkeleton):
+                            print("Importer: PdxSkeleton")
+                            amt = bpy.data.armatures.new(name)
+                            obj = bpy.data.objects.new(name, amt)
+ 
+                            scn = bpy.context.scene
+                            scn.objects.link(obj)
+                            scn.objects.active = obj
+                            obj.select = True
+
+                            names = [""] * len(shape.skeleton.joints)
+
+                            for joint in shape.skeleton.joints:
+                                names[joint.index] = joint.name
+
+                            bpy.ops.object.mode_set(mode='EDIT')
+
+                            #parentTransforms = {}
+                            
+                            for joint in shape.skeleton.joints:
+                                bone = amt.edit_bones.new(joint.name)
+
+                                #print("Loading Joint \"" + joint.name + "\\" + str(joint.index) + "\"")
+                                #print("Parent: \"" + names[joint.parent] + "\\" + str(joint.parent) + "\"")
+                                #print("Transformation Matrix: ")
+
+                                #print(str(joint.transform[0]) + "|" + str(joint.transform[1]) + "|" + str(joint.transform[2]) + "|" + str(joint.transform[3]))
+                                #print(str(joint.transform[4]) + "|" + str(joint.transform[5]) + "|" + str(joint.transform[6]) + "|" + str(joint.transform[7]))
+                                #print(str(joint.transform[8]) + "|" + str(joint.transform[9]) + "|" + str(joint.transform[10]) + "|" + str(joint.transform[11]))
+
+                                #transformationMatrix = mathutils.Matrix((joint.transform[0:3], joint.transform[4:7], joint.transform[8:11]))
+                                transformationMatrix = mathutils.Matrix()
+                                transformationMatrix[0][0:4] = joint.transform[0], joint.transform[3], joint.transform[6], joint.transform[9]
+                                transformationMatrix[1][0:4] = joint.transform[1], joint.transform[4], joint.transform[7], joint.transform[10]
+                                transformationMatrix[2][0:4] = joint.transform[2], joint.transform[5], joint.transform[8], joint.transform[11]
+                                transformationMatrix[3][0:4] = 0, 0, 0, 1
+                                #parentTransforms[joint.index] = transformationMatrix
+                                print(transformationMatrix.decompose())
+                                if joint.parent >= 0:
+                                    temp_transform = transformationMatrix.inverted()
+                                    components = temp_transform.decompose()
+
+                                    parent = amt.edit_bones[names[joint.parent]] 
+                                    bone.parent = parent
+                                    bone.use_connect = True 
+
+                                    mat_temp = components[1].to_matrix()
+                                    mat_temp.resize_4x4()
+
+                                    bone.tail = components[0] * mat_rot * mat_temp
+
+                                    #bone.tail = parent.tail + (mathutils.Vector((1, 1, 1)) * transformationMatrix * mat_rot)
+
+                                    #transformationMatrix *= parentTransforms[joint.parent]
+                                else:          
+                                    bone.head = (0,0,0)
+                                    bone.tail = (0,0,0)
+
+
+                                
+
+                            bpy.ops.object.mode_set(mode='OBJECT')
+
+                        print(str(len(shape.meshes)))
+                        for meshData in shape.meshes:
+                            if isinstance(meshData, pdx_data.PdxMesh):
                                 mesh = bpy.data.meshes.new(name)
                                 obj = bpy.data.objects.new(name, mesh)
                                 
@@ -37,7 +102,7 @@ class PdxFileImporter:
                                 scn.objects.active = obj
                                 obj.select = True
                                 
-                                mesh.from_pydata(shapeObject.verts, [], shapeObject.faces)
+                                mesh.from_pydata(meshData.verts, [], meshData.faces)
 
                                 bm = bmesh.new()
                                 bm.from_mesh(mesh)
@@ -49,15 +114,15 @@ class PdxFileImporter:
                                 bm.verts.index_update()
                                 bm.faces.index_update()
 
-                                if shapeObject.material.shader == "Collision":
+                                if meshData.material.shader == "Collision":
                                     obj.draw_type = "WIRE"
                                 else:
                                     uv_layer = bm.loops.layers.uv.new(name + "_uv")
 
                                     for face in bm.faces:
                                         for loop in face.loops:
-                                            loop[uv_layer].uv[0] = shapeObject.uv_coords[loop.vert.index][0]
-                                            loop[uv_layer].uv[1] = 1 - shapeObject.uv_coords[loop.vert.index][1]
+                                            loop[uv_layer].uv[0] = meshData.uv_coords[loop.vert.index][0]
+                                            loop[uv_layer].uv[1] = 1 - meshData.uv_coords[loop.vert.index][1]
 
                                     mat = bpy.data.materials.new(name=name + "_material")
                                     obj.data.materials.append(mat)
@@ -65,7 +130,7 @@ class PdxFileImporter:
                                     tex = bpy.data.textures.new(shape.name + "_tex", 'IMAGE')
                                     tex.type = 'IMAGE'
 
-                                    img_file = Path(os.path.join(os.path.dirname(self.file.filename), shapeObject.material.diffs))
+                                    img_file = Path(os.path.join(os.path.dirname(self.file.filename), meshData.material.diffs))
                                     altImageFile = Path(os.path.join(os.path.dirname(self.file.filename), os.path.basename(self.file.filename).replace(".mesh", "") + "_diffuse.dds"))
 
                                     if img_file.is_file():
@@ -90,41 +155,13 @@ class PdxFileImporter:
                                     slot.uv_layer = uv_layer.name
 
                                 bm.to_mesh(mesh)
-                            elif isinstance(shapeObject, pdx_data.PdxSkeleton):
-                                print("Importer: PdxSkeleton")
-                                amt = bpy.data.armatures.new(name)
-                                obj = bpy.data.objects.new(name, amt)
-
-                                scn = bpy.context.scene
-                                scn.objects.active = obj
-                                obj.select = True
-
-                                names = [""] * len(shapeObject.joints)
-
-                                for joint in shapeObject.joints:
-                                    print(joint.index)
-                                    names[joint.index] = joint.name
-
-                                bpy.ops.object.mode_set(mode='EDIT')
-
-                                for joint in shapeObject.joints:
-                                    bone = amt.edit_bones.new(joint.name)
-
-                                    if joint.parent >= 0:
-                                        parent = parent = amt.edit_bones[names[joint.index]]
-                                        bone.parent = parent
-                                        bone.head = parent.tail
-                                        bone.use_connect = False
-                                    else:         
-                                        bone.head = (0,0,0)
-
-                                    bone.tail = (0, 0, 0)
                             else:
-                                print("ERROR ::: Invalid Object in Shape: " + str(shapeObject))
+                                print("ERROR ::: Invalid Object in Shape: " + str(meshData))
                     else:
                         print("ERROR ::: Invalid Object in World: " + str(shape))
             elif isinstance(node, pdx_data.PdxLocators):
                 for locator in node.locators:
+                    #print("Locators")
                     obj = bpy.data.objects.new(locator.name, None)
                     bpy.context.scene.objects.link(obj)
                     obj.empty_draw_size = 2
