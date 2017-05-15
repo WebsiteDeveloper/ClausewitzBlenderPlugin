@@ -112,7 +112,7 @@ class PdxFile():
             print((" "*depth) + "Object Name: " + object_name)
 
             if object_name == "object":
-                result = PdxWorld(sub_objects)
+                result = PdxWorld()
             elif object_name == "mesh":
                 result = PdxMesh()
             elif object_name == "skeleton":
@@ -136,7 +136,8 @@ class PdxFile():
                         break
 
             if object_name == "object":
-                result = PdxWorld(sub_objects)
+                result = PdxWorld()
+                result.objects = sub_objects
             elif object_name == "mesh":
                 result = PdxMesh()
 
@@ -224,7 +225,15 @@ class PdxFile():
                     result = PdxLocator(object_name, object_properties[0].value)
                 elif isinstance(prev_obj, PdxWorld):
                     result = PdxShape(object_name)
-                    result.objects = sub_objects
+                    meshes = []
+
+                    for o in sub_objects:
+                        if isinstance(o, PdxSkeleton):
+                            result.skeleton = o
+                        elif isinstance(o, PdxMesh):
+                            meshes.append(o)
+
+                    result.meshes = meshes
                 elif isinstance(prev_obj, PdxSkeleton):
                     result = PdxJoint(object_name)
                     for p in object_properties:
@@ -270,8 +279,8 @@ class PdxAsset():
         return result
 
 class PdxWorld():
-    def __init__(self, objects):
-        self.objects = objects
+    def __init__(self):
+        self.objects = []
 
     def get_binary_data(self):
         """Returns the Byte encoded Object Data"""
@@ -287,7 +296,8 @@ class PdxWorld():
 class PdxShape():
     def __init__(self, name):
         self.name = name
-        self.objects = None
+        self.meshes = []
+        self.skeleton = None
 
     def get_binary_data(self):
         result = bytearray()
@@ -295,8 +305,11 @@ class PdxShape():
         result.extend(struct.pack("2s", b'[['))
         result.extend(struct.pack(str(len(self.name)) + "sb", self.name.encode('UTF-8'), 0))
         
-        for o in self.objects:
-            result.extend(o.get_binary_data())
+        for mesh in self.meshes:
+            result.extend(mesh.get_binary_data())
+
+        if not(skeleton is None):
+            result.extend(skeleton.get_binary_data())
 
         return result
 
@@ -439,8 +452,6 @@ class PdxMaterial():
         result.extend(struct.pack(str(len(self.shader)) + "sb", self.shader.encode("UTF-8"), 0))
 
         if self.shader != "Collision":
-
-        if self.shaders != "Collision":
 
             result.extend(struct.pack("cb5s", b'!', 4, b'diffs'))
             result.extend(struct.pack("II", 1, len(self.diff) + 1))
