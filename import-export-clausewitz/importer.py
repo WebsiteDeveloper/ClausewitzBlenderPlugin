@@ -66,18 +66,28 @@ class PdxFileImporter:
                                 transformationMatrix[3][0:4] = 0, 0, 0, 1
                                 #parentTransforms[joint.index] = transformationMatrix
                                 print(transformationMatrix.decompose())
-                                if joint.parent >= 0: 
+                                if joint.parent >= 0:
+                                    temp_transform = transformationMatrix.inverted()
+                                    components = temp_transform.decompose()
+
                                     parent = amt.edit_bones[names[joint.parent]] 
-                                    bone.parent = parent 
-                                    bone.head = parent.tail 
+                                    bone.parent = parent
                                     bone.use_connect = True 
+
+                                    mat_temp = components[1].to_matrix()
+                                    mat_temp.resize_4x4()
+
+                                    bone.tail = components[0] * mat_rot * mat_temp
+
+                                    #bone.tail = parent.tail + (mathutils.Vector((1, 1, 1)) * transformationMatrix * mat_rot)
 
                                     #transformationMatrix *= parentTransforms[joint.parent]
                                 else:          
                                     bone.head = (0,0,0)
+                                    bone.tail = (0,0,0)
 
 
-                                bone.tail = bone.head + (mathutils.Vector((0, 0, -1)) * transformationMatrix.inverted() * mat_rot)
+                                
 
                             bpy.ops.object.mode_set(mode='OBJECT')
 
