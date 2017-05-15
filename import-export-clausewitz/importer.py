@@ -66,8 +66,9 @@ class PdxFileImporter:
                                 transformationMatrix[3][0:4] = 0, 0, 0, 1
                                 #parentTransforms[joint.index] = transformationMatrix
                                 print(transformationMatrix.decompose())
+
                                 if joint.parent >= 0:
-                                    temp_transform = transformationMatrix.inverted()
+                                    temp_transform = transformationMatrix #.inverted()
                                     components = temp_transform.decompose()
 
                                     parent = amt.edit_bones[names[joint.parent]] 
@@ -77,7 +78,7 @@ class PdxFileImporter:
                                     mat_temp = components[1].to_matrix()
                                     mat_temp.resize_4x4()
 
-                                    bone.tail = components[0] * mat_rot * mat_temp
+                                    bone.tail = components[0] * mat_temp * mat_rot
 
                                     #bone.tail = parent.tail + (mathutils.Vector((1, 1, 1)) * transformationMatrix * mat_rot)
 
@@ -161,11 +162,11 @@ class PdxFileImporter:
                         print("ERROR ::: Invalid Object in World: " + str(shape))
             elif isinstance(node, pdx_data.PdxLocators):
                 for locator in node.locators:
-                    #print("Locators")
-                    obj = bpy.data.objects.new(locator.name, None)
-                    bpy.context.scene.objects.link(obj)
-                    obj.empty_draw_size = 2
-                    obj.empty_draw_type = 'PLAIN_AXES'
-                    obj.location = mathutils.Vector((locator.pos[0], locator.pos[1], locator.pos[2])) * mat_rot
+                    print("Locators")
+                    #obj = bpy.data.objects.new(locator.name, None)
+                    #bpy.context.scene.objects.link(obj)
+                    #obj.empty_draw_size = 2
+                    #obj.empty_draw_type = 'PLAIN_AXES'
+                    #obj.location = mathutils.Vector((locator.pos[0], locator.pos[1], locator.pos[2])) * mat_rot
             else:
                 print("ERROR ::: Invalid node found: " + str(node))
