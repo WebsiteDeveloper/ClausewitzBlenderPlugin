@@ -4,6 +4,7 @@ import mathutils
 import math
 import os
 import io
+import random
 from pathlib import Path
 from . import (pdx_data, utils)
 
@@ -25,19 +26,30 @@ class PdxFileImporter:
                 print("Importer: PDXAsset")#TODOs
             elif isinstance(node, pdx_data.PdxWorld):
                 for shape in node.objects:
+                    bpy.ops.object.select_all(action='DESELECT')
                     if isinstance(shape, pdx_data.PdxShape):
                         name = shape.name
 
-                        if isinstance(shape.skeleton, pdx_data.PdxSkeleton):
-                            print("Importer: PdxSkeleton")
-                            amt = bpy.data.armatures.new(name)
-                            obj = bpy.data.objects.new(name, amt)
- 
-                            scn = bpy.context.scene
-                            scn.objects.link(obj)
-                            scn.objects.active = obj
-                            obj.select = True
+                        mesh = bpy.data.meshes.new(name)
+                        obj = bpy.data.objects.new(name, mesh)
+                        
+                        scn = bpy.context.scene
+                        scn.objects.link(obj)
+                        scn.objects.active = obj
+                        obj.select = True
 
+                        collisionShape = False
+
+                        if isinstance(shape.skeleton, pdx_data.PdxSkeleton):
+                            amt = bpy.data.armatures.new(name)
+                            amtObj = bpy.data.objects.new(name, amt)
+                            amtObj.parent = obj
+                                
+                            scn = bpy.context.scene
+                            scn.objects.link(amtObj)
+                            scn.objects.active = amtObj
+                            amtObj.select = True
+                            
                             names = [""] * len(shape.skeleton.joints)
 
                             for joint in shape.skeleton.joints:
@@ -54,7 +66,7 @@ class PdxFileImporter:
                                 transformationMatrix[2][0:4] = joint.transform[2], joint.transform[5], joint.transform[8], joint.transform[11]
                                 transformationMatrix[3][0:4] = 0, 0, 0, 1
 
-                                print(transformationMatrix.decompose())
+                                #print(transformationMatrix.decompose())
 
                                 if joint.parent >= 0:
 
@@ -73,21 +85,20 @@ class PdxFileImporter:
                                 bone.tail = -components[0] * mat_temp * mat_rot
                             bpy.ops.object.mode_set(mode='OBJECT')
 
-                        print(str(len(shape.meshes)))
                         for meshData in shape.meshes:
                             if isinstance(meshData, pdx_data.PdxMesh):
-                                mesh = bpy.data.meshes.new(name)
-                                obj = bpy.data.objects.new(name, mesh)
-                                
+                                sub_mesh = bpy.data.meshes.new(name)
+                                sub_object = bpy.data.objects.new(name, sub_mesh)
+                        
                                 scn = bpy.context.scene
-                                scn.objects.link(obj)
-                                scn.objects.active = obj
-                                obj.select = True
-                                
-                                mesh.from_pydata(meshData.verts, [], meshData.faces)
+                                scn.objects.link(sub_object)
+                                scn.objects.active = sub_object
+                                sub_object.select = True
+
+                                sub_mesh.from_pydata(meshData.verts, [], meshData.faces)
 
                                 bm = bmesh.new()
-                                bm.from_mesh(mesh)
+                                bm.from_mesh(sub_mesh)
 
                                 for vert in bm.verts:
                                     vert.co = vert.co * mat_rot
@@ -97,7 +108,7 @@ class PdxFileImporter:
                                 bm.faces.index_update()
 
                                 if meshData.material.shader == "Collision":
-                                    obj.draw_type = "WIRE"
+                                    collisionShape = True
                                 else:
                                     uv_layer = bm.loops.layers.uv.new(name + "_uv")
 
@@ -107,7 +118,8 @@ class PdxFileImporter:
                                             loop[uv_layer].uv[1] = 1 - meshData.uv_coords[loop.vert.index][1]
 
                                     mat = bpy.data.materials.new(name=name + "_material")
-                                    obj.data.materials.append(mat)
+                                    mat.diffuse_color = (random.random(), random.random(), random.random())
+                                    sub_object.data.materials.append(mat)
 
                                     tex = bpy.data.textures.new(shape.name + "_tex", 'IMAGE')
                                     tex.type = 'IMAGE'
@@ -136,9 +148,16 @@ class PdxFileImporter:
                                     slot.use = True
                                     slot.uv_layer = uv_layer.name
 
-                                bm.to_mesh(mesh)
+                                bm.to_mesh(sub_mesh)
                             else:
                                 print("ERROR ::: Invalid Object in Shape: " + str(meshData))
+                        
+                        scn.objects.active = obj
+                        bpy.ops.object.join()
+
+                        if collisionShape:
+                            obj.draw_type = "WIRE"
+
                     else:
                         print("ERROR ::: Invalid Object in World: " + str(shape))
             elif isinstance(node, pdx_data.PdxLocators):
