@@ -18,6 +18,7 @@ class PdxFileImporter:
         eul = mathutils.Euler((0.0, 0.0, math.radians(180.0)), 'XYZ')
         eul2 = mathutils.Euler((math.radians(90.0), 0.0, 0.0), 'XYZ')
         mat_rot = eul.to_matrix() * eul2.to_matrix()
+        mat_rot.resize_4x4()
 
         for node in self.file.nodes:
             if isinstance(node, pdx_data.PdxAsset):
@@ -57,9 +58,14 @@ class PdxFileImporter:
                                 #print(str(joint.transform[4]) + "|" + str(joint.transform[5]) + "|" + str(joint.transform[6]) + "|" + str(joint.transform[7]))
                                 #print(str(joint.transform[8]) + "|" + str(joint.transform[9]) + "|" + str(joint.transform[10]) + "|" + str(joint.transform[11]))
 
-                                transformationMatrix = mathutils.Matrix((joint.transform[0:3], joint.transform[4:7], joint.transform[8:11]))
+                                #transformationMatrix = mathutils.Matrix((joint.transform[0:3], joint.transform[4:7], joint.transform[8:11]))
+                                transformationMatrix = mathutils.Matrix()
+                                transformationMatrix[0][0:4] = joint.transform[0], joint.transform[3], joint.transform[6], joint.transform[9]
+                                transformationMatrix[1][0:4] = joint.transform[1], joint.transform[4], joint.transform[7], joint.transform[10]
+                                transformationMatrix[2][0:4] = joint.transform[2], joint.transform[5], joint.transform[8], joint.transform[11]
+                                transformationMatrix[3][0:4] = 0, 0, 0, 1
                                 #parentTransforms[joint.index] = transformationMatrix
-
+                                print(transformationMatrix.decompose())
                                 if joint.parent >= 0: 
                                     parent = amt.edit_bones[names[joint.parent]] 
                                     bone.parent = parent 
@@ -71,7 +77,7 @@ class PdxFileImporter:
                                     bone.head = (0,0,0)
 
 
-                                bone.tail = bone.head + (mathutils.Vector((1, 1, 1)) * transformationMatrix * mat_rot)
+                                bone.tail = bone.head + (mathutils.Vector((0, 0, -1)) * transformationMatrix.inverted() * mat_rot)
 
                             bpy.ops.object.mode_set(mode='OBJECT')
 
