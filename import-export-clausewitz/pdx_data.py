@@ -84,6 +84,9 @@ class PdxFile():
         if name == "pdxasset":
             result = PdxAsset()
             result.bounds = (lower_bound, upper_bound)
+
+            if len(property_data) >= 2:
+                result.version = (property_data[0], property_data[1])
         else:
             result = PdxProperty(name, (lower_bound, upper_bound))
             result.value = property_data
@@ -253,7 +256,7 @@ class PdxAsset():
     def __init__(self):
         self.bounds = (0, 0)
         self.name = "pdxasset"
-        self.value = 0
+        self.version = (0, 0) # Version x.y formated like (x, y)
 
     def get_binary_data(self):
         """Returns the Byte encoded Object Data"""
@@ -276,7 +279,7 @@ class PdxWorld():
 
         result.extend(struct.pack("7sb", b'[object', 0))
 
-        for o in range(len(self.objects)):
+        for o in self.objects:
             result.extend(o.get_binary_data())
         
         return result
@@ -434,13 +437,15 @@ class PdxMaterial():
         result.extend(struct.pack("cb7s", b'!', 6, b'shaders'))
         result.extend(struct.pack("II", 1, len(self.shader) + 1))
         result.extend(struct.pack(str(len(self.shader)) + "sb", self.shader.encode("UTF-8"), 0))
-        
+
         if self.shader != "Collision":
+
+        if self.shaders != "Collision":
 
             result.extend(struct.pack("cb5s", b'!', 4, b'diffs'))
             result.extend(struct.pack("II", 1, len(self.diff) + 1))
             result.extend(struct.pack(str(len(self.diff)) + "sb", self.diff.encode("UTF-8"), 0))
-            
+
             result.extend(struct.pack("cb2s", b'!', 1, b'ns'))
             result.extend(struct.pack("II", 1, len(self.normal) + 1))
             result.extend(struct.pack(str(len(self.normal)) + "sb", self.normal.encode("UTF-8"), 0))
