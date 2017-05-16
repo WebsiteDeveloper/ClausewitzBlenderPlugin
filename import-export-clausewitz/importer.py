@@ -24,6 +24,7 @@ class PdxFileImporter:
         for node in self.file.nodes:
             if isinstance(node, pdx_data.PdxAsset):
                 print("Importer: PDXAsset")#TODOs
+                print("PDXAsset Version " + str(node.version[0]) + "." + str(node.version[1]))
             elif isinstance(node, pdx_data.PdxWorld):
                 for shape in node.objects:
                     bpy.ops.object.select_all(action='DESELECT')
@@ -69,7 +70,6 @@ class PdxFileImporter:
                                 #print(transformationMatrix.decompose())
 
                                 if joint.parent >= 0:
-
                                     parent = amt.edit_bones[names[joint.parent]] 
                                     bone.parent = parent
                                     bone.use_connect = True 
@@ -89,7 +89,7 @@ class PdxFileImporter:
                             if isinstance(meshData, pdx_data.PdxMesh):
                                 sub_mesh = bpy.data.meshes.new(name)
                                 sub_object = bpy.data.objects.new(name, sub_mesh)
-                        
+
                                 scn = bpy.context.scene
                                 scn.objects.link(sub_object)
                                 scn.objects.active = sub_object
@@ -124,7 +124,7 @@ class PdxFileImporter:
                                     tex = bpy.data.textures.new(shape.name + "_tex", 'IMAGE')
                                     tex.type = 'IMAGE'
 
-                                    img_file = Path(os.path.join(os.path.dirname(self.file.filename), meshData.material.diffs))
+                                    img_file = Path(os.path.join(os.path.dirname(self.file.filename), meshData.material.diff))
                                     altImageFile = Path(os.path.join(os.path.dirname(self.file.filename), os.path.basename(self.file.filename).replace(".mesh", "") + "_diffuse.dds"))
 
                                     if img_file.is_file():
@@ -151,7 +151,7 @@ class PdxFileImporter:
                                 bm.to_mesh(sub_mesh)
                             else:
                                 print("ERROR ::: Invalid Object in Shape: " + str(meshData))
-                        
+
                         scn.objects.active = obj
                         bpy.ops.object.join()
 

@@ -429,14 +429,14 @@ class PdxMesh():
             result.extend(self.skin.get_binary_data())
         else:
             print("WARNING ::: No Skin found!")
-        
+
         return result
 
 class PdxMaterial():
     def __init__(self):
         #Initialized to Collision for ease of use in exporter
         self.shader = "Collision"
-        self.diffs = ""
+        self.diff = ""
         self.normal = ""
         self.spec = ""
 
