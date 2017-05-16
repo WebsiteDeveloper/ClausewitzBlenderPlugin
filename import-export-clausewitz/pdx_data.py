@@ -223,6 +223,13 @@ class PdxFile():
             else:
                 if isinstance(prev_obj, PdxLocators):
                     result = PdxLocator(object_name, object_properties[0].value)
+
+                    if len(object_properties) > 1:
+                        result.quaternion = object_properties[1].value
+
+                    if len(object_properties) > 2:
+                        result.parent = object_properties[2].value
+
                 elif isinstance(prev_obj, PdxWorld):
                     result = PdxShape(object_name)
                     meshes = []
@@ -308,8 +315,8 @@ class PdxShape():
         for mesh in self.meshes:
             result.extend(mesh.get_binary_data())
 
-        if not(skeleton is None):
-            result.extend(skeleton.get_binary_data())
+        if not(self.skeleton is None):
+            result.extend(self.skeleton.get_binary_data())
 
         return result
 
@@ -507,7 +514,7 @@ class PdxSkin():
 
 class PdxLocators():
     def __init__(self):
-        self.bounds = (0,0)
+        self.bounds = (0, 0)
         self.locators = []
 
     def get_binary_data(self):
@@ -523,9 +530,11 @@ class PdxLocators():
 
 class PdxLocator():
     def __init__(self, name, pos):
-        self.bounds = (0,0)
+        self.bounds = (0, 0)
         self.name = name
         self.pos = pos
+        self.quaternion = (0, 0, 0, 0)
+        self.parent = ""
 
     def get_binary_data(self):
         """Returns the Byte encoded Object Data"""
@@ -534,6 +543,7 @@ class PdxLocator():
         result.extend(struct.pack("2s", b'[['))
         result.extend(struct.pack(str(len(self.name)) + "sb", self.name.encode('UTF-8'), 0))
 
+        #TODO: Fix Locator Export
         result.extend(struct.pack("cb2sifff", b'!', 1, b'pf', 3, self.pos[0], self.pos[1], self.pos[2]))
         result.extend(struct.pack("cb2sifff", b'!', 1, b'qf', 3, 0.0, 0.0, 0.0))
 

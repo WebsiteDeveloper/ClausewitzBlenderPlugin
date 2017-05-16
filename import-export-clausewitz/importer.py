@@ -173,7 +173,7 @@ class PdxFileImporter:
                                 bm.to_mesh(sub_mesh)
                             else:
                                 print("ERROR ::: Invalid Object in Shape: " + str(meshData))
-                        
+
                         scn.objects.active = meshObj
                         bpy.ops.object.join()
 
