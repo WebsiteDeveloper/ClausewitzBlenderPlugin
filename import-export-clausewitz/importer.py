@@ -187,9 +187,13 @@ class PdxFileImporter:
                     else:
                         print("ERROR ::: Invalid Object in World: " + str(shape))
             elif isinstance(node, pdx_data.PdxLocators):
+                parent_locator = bpy.data.objects.new('Locators', None)
+                bpy.context.scene.objects.link(parent_locator)
+
                 for locator in node.locators:
                     obj = bpy.data.objects.new(locator.name, None)
                     bpy.context.scene.objects.link(obj)
+                    obj.parent = parent_locator
                     obj.empty_draw_size = 2
                     obj.empty_draw_type = 'SINGLE_ARROW'
                     obj.location = mathutils.Vector((locator.pos[0], locator.pos[1], locator.pos[2])) * mat_rot
