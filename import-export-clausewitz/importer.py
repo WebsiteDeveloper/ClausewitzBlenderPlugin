@@ -200,6 +200,7 @@ class PdxFileImporter:
                     obj.rotation_mode = 'QUATERNION'
                     obj.rotation_quaternion = locator.quaternion
 
+                    #TODO Locator Parenting
                     #parentBoneName = locator.parent
 
                     #constraint = obj.constraints.new('CHILD_OF')

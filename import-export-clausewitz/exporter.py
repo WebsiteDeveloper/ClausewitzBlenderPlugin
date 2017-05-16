@@ -14,10 +14,6 @@ class PdxFileExporter:
         self.filename = filename
 
     def export_mesh(self, name):
-        print("Name: " + str(name))
-
-        objects = []
-
         eul = mathutils.Euler((0.0, 0.0, math.radians(180.0)), 'XYZ')
         eul2 = mathutils.Euler((math.radians(90.0), 0.0, 0.0), 'XYZ')
         mat_rot = eul.to_matrix() * eul2.to_matrix()
@@ -25,7 +21,39 @@ class PdxFileExporter:
 
         transform_mat = bpy.data.objects[name].matrix_world * mat_rot.to_4x4()
 
-        objects.append(pdx_data.PdxAsset())
+        pdxObjects = []
+        pdxObjects.append(pdx_data.PdxAsset())
+
+        locators = pdx_data.PdxLocators()
+
+        for obj in bpy.data.objects:
+            if obj.select:
+                if obj.type == "MESH":
+                    print("M")
+                elif obj.type == "ARMATURE":
+                    print("A")
+                elif obj.type == "EMPTY":
+                    if obj.parent is not None and obj.parent.name.lower() == "locators":
+                        locator = pdx_data.PdxLocator(obj.name, obj.location * transform_mat)
+                        obj.rotation_mode = 'QUATERNION'
+                        locator.quaternion = obj.rotation_quaternion
+                        #TODO locator.parent
+
+                        locators.locators.append(locator)
+                else:
+                    print("Exporter: Invalid Type Selected: " + obj.type)
+
+        if len(locators.locators) > 0:
+            pdxObjects.append(locators)
+
+        result_file = io.open(self.filename, 'wb')
+
+        result_file.write(b'@@b@')
+        for i in range(len(pdxObjects)):
+            result_file.write(pdxObjects[i].get_binary_data())
+
+        result_file.close()
+"""
 
         world = pdx_data.PdxWorld([])
 
@@ -228,10 +256,5 @@ class PdxFileExporter:
         world.objects.append(locators)
         objects.append(world)
 
-        result_file = io.open(self.filename, 'wb')
 
-        result_file.write(b'@@b@')
-        for i in range(len(objects)):
-            result_file.write(objects[i].get_binary_data())
-
-        result_file.close()
+"""

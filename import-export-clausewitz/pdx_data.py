@@ -544,8 +544,8 @@ class PdxLocator():
         result.extend(struct.pack(str(len(self.name)) + "sb", self.name.encode('UTF-8'), 0))
 
         result.extend(struct.pack("cb2sifff", b'!', 1, b'pf', 3, self.pos[0], self.pos[1], self.pos[2]))
-        result.extend(struct.pack("cb2sifffF", b'!', 1, b'qf', 4, quaternion[0], quaternion[1], quaternion[2], quaternion[3]))
-        if parent != "":
+        result.extend(struct.pack("cb2siffff", b'!', 1, b'qf', 4, self.quaternion[0], self.quaternion[1], self.quaternion[2], self.quaternion[3]))
+        if self.parent != "":
             result.extend(struct.pack("cb5s", b'!', 4, b'pas'))
             result.extend(struct.pack("II", 1, len(self.parent) + 1))
             result.extend(struct.pack(str(len(self.parent)) + "sb", self.parent.encode("UTF-8"), 0))
