@@ -31,26 +31,19 @@ class PdxFileImporter:
                     if isinstance(shape, pdx_data.PdxShape):
                         name = shape.name
 
-                        mesh = bpy.data.meshes.new(name)
-                        obj = bpy.data.objects.new(name, mesh)
-                        
-                        scn = bpy.context.scene
-                        scn.objects.link(obj)
-                        scn.objects.active = obj
-                        obj.select = True
+                        obj = None
 
                         collisionShape = False
 
                         if isinstance(shape.skeleton, pdx_data.PdxSkeleton):
                             amt = bpy.data.armatures.new(name)
-                            amtObj = bpy.data.objects.new(name, amt)
-                            amtObj.parent = obj
-                                
+                            obj = bpy.data.objects.new(name, amt)
+
                             scn = bpy.context.scene
-                            scn.objects.link(amtObj)
-                            scn.objects.active = amtObj
-                            amtObj.select = True
-                            
+                            scn.objects.link(obj)
+                            scn.objects.active = obj
+                            obj.select = True
+
                             names = [""] * len(shape.skeleton.joints)
 
                             for joint in shape.skeleton.joints:
@@ -83,7 +76,18 @@ class PdxFileImporter:
                                 mat_temp.resize_4x4()
 
                                 bone.tail = -components[0] * mat_temp * mat_rot
+
                             bpy.ops.object.mode_set(mode='OBJECT')
+
+                        mesh = bpy.data.meshes.new(name)
+                        meshObj = bpy.data.objects.new(name, mesh)
+
+                        scn = bpy.context.scene
+                        scn.objects.link(meshObj)
+                        scn.objects.active = meshObj
+                        meshObj.select = True
+                        if not(obj is None):
+                            meshObj.parent = obj
 
                         for meshData in shape.meshes:
                             if isinstance(meshData, pdx_data.PdxMesh):
@@ -151,12 +155,12 @@ class PdxFileImporter:
                                 bm.to_mesh(sub_mesh)
                             else:
                                 print("ERROR ::: Invalid Object in Shape: " + str(meshData))
-
-                        scn.objects.active = obj
+                        
+                        scn.objects.active = meshObj
                         bpy.ops.object.join()
 
                         if collisionShape:
-                            obj.draw_type = "WIRE"
+                            meshObj.draw_type = "WIRE"
 
                     else:
                         print("ERROR ::: Invalid Object in World: " + str(shape))
