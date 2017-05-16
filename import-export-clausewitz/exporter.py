@@ -13,6 +13,12 @@ class PdxFileExporter:
     def __init__(self, filename):
         self.filename = filename
 
+    #Returns Array of Pdx_Meshs
+    #Takes Mesh Object
+    def splitMeshes(self, obj):
+        #Viel Spass Apple Mit der Funktion
+        print("Exporting and splitting Mesh...")
+
     def export_mesh(self, name):
         eul = mathutils.Euler((0.0, 0.0, math.radians(180.0)), 'XYZ')
         eul2 = mathutils.Euler((math.radians(90.0), 0.0, 0.0), 'XYZ')
@@ -25,13 +31,29 @@ class PdxFileExporter:
         pdxObjects.append(pdx_data.PdxAsset())
 
         locators = pdx_data.PdxLocators()
+        world = pdx_data.PdxWorld()
 
         for obj in bpy.data.objects:
             if obj.select:
                 if obj.type == "MESH":
-                    print("M")
+                    if obj.parent is None:
+                        shape = pdx_data.PdxShape(obj.name)
+                        shape.meshes = self.splitMeshes(obj)
+                        world.objects.append(shape)
                 elif obj.type == "ARMATURE":
-                    print("A")
+                    if obj.parent is None:
+                        #Highly Inefficient for now
+                        for child in bpy.data.objects:
+                            if child.parent == obj:
+                                shape = pdx_data.PdxShape(obj.name)
+                                shape.meshes = self.splitMeshes(obj)
+
+                                skeleton = pdx_data.PdxSkeleton()
+
+                                #Add Joints, etc...
+
+                                shape.skeleton = skeleton
+                                world.objects.append(shape)
                 elif obj.type == "EMPTY":
                     if obj.parent is not None and obj.parent.name.lower() == "locators":
                         locator = pdx_data.PdxLocator(obj.name, obj.location * transform_mat)
@@ -42,6 +64,8 @@ class PdxFileExporter:
                         locators.locators.append(locator)
                 else:
                     print("Exporter: Invalid Type Selected: " + obj.type)
+
+        pdxObjects.append(world)
 
         if len(locators.locators) > 0:
             pdxObjects.append(locators)
@@ -238,17 +262,6 @@ class PdxFileExporter:
             collisionMesh.faces = cfaces
             collisionMesh.meshBounds = pdx_data.PdxBounds(cbb_min, cbb_max)
             collisionMesh.material = pdx_data.PdxMaterial()
-
-        #Locators Stuff
-        locators_array = []
-
-        for i in range(len(bpy.data.objects)):
-            if bpy.data.objects[i].type == 'EMPTY':
-                temp = pdx_data.PdxLocator(bpy.data.objects[i].name, bpy.data.objects[i].location * transform_mat)
-                locators_array.append(temp)
-
-        locators = pdx_data.PdxLocators()
-        locators.locators = locators_array
 
         world.objects.append(shape)
         if collisionShape is not None:
