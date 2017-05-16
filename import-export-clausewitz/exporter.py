@@ -15,11 +15,11 @@ class PdxFileExporter:
 
     #Returns Array of Pdx_Meshs
     #Takes Mesh Object
-    def splitMeshes(self, obj):
+    def splitMeshes(self, obj, boneIDs=None):
         #Viel Spass Apple Mit der Funktion
         print("Exporting and splitting Mesh...")
 
-    def export_mesh(self, name):
+    def export_mesh(self, name, boneIDs=None):
         eul = mathutils.Euler((0.0, 0.0, math.radians(180.0)), 'XYZ')
         eul2 = mathutils.Euler((math.radians(90.0), 0.0, 0.0), 'XYZ')
         mat_rot = eul.to_matrix() * eul2.to_matrix()
@@ -30,30 +30,50 @@ class PdxFileExporter:
         pdxObjects = []
         pdxObjects.append(pdx_data.PdxAsset())
 
-        locators = pdx_data.PdxLocators()
-        world = pdx_data.PdxWorld()
+        pdxLocators = pdx_data.PdxLocators()
+        pdxWorld = pdx_data.PdxWorld()
 
         for obj in bpy.data.objects:
             if obj.select:
                 if obj.type == "MESH":
                     if obj.parent is None:
-                        shape = pdx_data.PdxShape(obj.name)
-                        shape.meshes = self.splitMeshes(obj)
-                        world.objects.append(shape)
+                        pdxShape = pdx_data.PdxShape(obj.name)
+                        pdxShape.meshes = self.splitMeshes(obj)
+                        pdxWorld.objects.append(pdxShape)
                 elif obj.type == "ARMATURE":
                     if obj.parent is None:
                         #Highly Inefficient for now
                         for child in bpy.data.objects:
                             if child.parent == obj:
-                                shape = pdx_data.PdxShape(obj.name)
-                                shape.meshes = self.splitMeshes(obj)
+                                pdxSkeleton = pdx_data.PdxSkeleton()
 
-                                skeleton = pdx_data.PdxSkeleton()
+                                boneIDs = {}
 
-                                #Add Joints, etc...
+                                for i in range(len(obj.data.bones)):
+                                    bone = obj.data.bones[i]
+                                    boneIDs[bone.name] = i
 
-                                shape.skeleton = skeleton
-                                world.objects.append(shape)
+                                for i in range(len(obj.data.bones)):
+                                    bone = obj.data.bones[i]
+                                    print(bone.name)
+                                    print(str(boneIDs[bone.name]))
+                                    pdxJoint = pdx_data.PdxJoint(bone.name)
+                                    pdxJoint.index = i
+                                    print(str(bone.parent))
+                                    if bone.parent is not None:
+                                        print(str(boneIDs[bone.parent.name]))
+                                        pdxJoint.parent = boneIDs[bone.parent.name]
+                                    else:
+                                        print("Root Bone")
+
+                                    pdxSkeleton.joints.append(pdxJoint)
+
+                                pdxShape.skeleton = pdxSkeleton
+
+                                pdxShape = pdx_data.PdxShape(obj.name)
+                                pdxShape.meshes = self.splitMeshes(obj, boneIDs)
+
+                                pdxWorld.objects.append(pdxShape)
                 elif obj.type == "EMPTY":
                     if obj.parent is not None and obj.parent.name.lower() == "locators":
                         locator = pdx_data.PdxLocator(obj.name, obj.location * transform_mat)
@@ -61,14 +81,14 @@ class PdxFileExporter:
                         locator.quaternion = obj.rotation_quaternion
                         #TODO locator.parent
 
-                        locators.locators.append(locator)
+                        pdxLocators.locators.append(locator)
                 else:
                     print("Exporter: Invalid Type Selected: " + obj.type)
 
-        pdxObjects.append(world)
+        pdxObjects.append(pdxWorld)
 
-        if len(locators.locators) > 0:
-            pdxObjects.append(locators)
+        if len(pdxLocators.locators) > 0:
+            pdxObjects.append(pdxLocators)
 
         result_file = io.open(self.filename, 'wb')
 

@@ -312,8 +312,11 @@ class PdxShape():
         result.extend(struct.pack("2s", b'[['))
         result.extend(struct.pack(str(len(self.name)) + "sb", self.name.encode('UTF-8'), 0))
         
-        for mesh in self.meshes:
-            result.extend(mesh.get_binary_data())
+        if self.meshes is not None:
+            for mesh in self.meshes:
+                result.extend(mesh.get_binary_data())
+        else:
+            print("ERROR ::: No Mesh found!")
 
         if not(self.skeleton is None):
             result.extend(self.skeleton.get_binary_data())
@@ -348,11 +351,12 @@ class PdxJoint():
         result.extend(struct.pack(str(len(self.name)) + "sb", self.name.encode('UTF-8'), 0))
 
         result.extend(struct.pack("cb3sII", b'!', 1, b'ixi', 1, self.index))
-        result.extend(struct.pack("cb3sII", b'!', 1, b'pai', 1, self.parent))
+        if self.parent != -1:
+            result.extend(struct.pack("cb3sII", b'!', 1, b'pai', 1, self.parent))
 
-        if len(transform) == 12:
+        if len(self.transform) == 12:
             result.extend(struct.pack("cb3sI", b'!', 1, b'pai', 12))
-            for t in transform:
+            for t in self.transform:
                 result.extend(struct.pack("I",t))
 
         return result
