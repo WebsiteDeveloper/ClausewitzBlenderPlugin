@@ -66,6 +66,8 @@ class PdxFileExporter:
                                     else:
                                         print("Root Bone")
 
+                                    pdxJoint.transform = [0] * 12
+
                                     pdxSkeleton.joints.append(pdxJoint)
 
                                 pdxShape.skeleton = pdxSkeleton

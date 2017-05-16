@@ -46,6 +46,8 @@ class PdxFile():
         for i in range(name_length):
             name += buffer.NextChar()
 
+        print(name)
+
         #name = utils.TranslatePropertyName(name) Umbenennen verwirrt nur!
         #print("Property: " + name)
 
@@ -53,7 +55,7 @@ class PdxFile():
 
         if char == "i":
             data_count = buffer.NextUInt32()
-
+            print("Count: ")
             for i in range(data_count):
                 temp = buffer.NextInt32()
                 property_data.append(temp)
@@ -350,14 +352,14 @@ class PdxJoint():
         result.extend(struct.pack("4s", b'[[[['))
         result.extend(struct.pack(str(len(self.name)) + "sb", self.name.encode('UTF-8'), 0))
 
-        result.extend(struct.pack("cb3sII", b'!', 1, b'ixi', 1, self.index))
+        result.extend(struct.pack("cb3sII", b'!', 2, b'ixi', 1, self.index))
         if self.parent != -1:
-            result.extend(struct.pack("cb3sII", b'!', 1, b'pai', 1, self.parent))
+            result.extend(struct.pack("cb3sII", b'!', 2, b'pai', 1, self.parent))
 
         if len(self.transform) == 12:
-            result.extend(struct.pack("cb3sI", b'!', 1, b'pai', 12))
+            result.extend(struct.pack("cb3sI", b'!', 2, b'txf', 12))
             for t in self.transform:
-                result.extend(struct.pack("I",t))
+                result.extend(struct.pack("f",t))
 
         return result
 
@@ -507,10 +509,11 @@ class PdxSkin():
 
         result.extend(struct.pack("8sb", b'[[[[skin', 0))
 
-        result.extend(struct.pack("cb4s", b'!', 2, b'ixf'))
+        result.extend(struct.pack("cb6sII", b'!', 5, b'bonesi', 1, self.bonesPerVertice))
+        result.extend(struct.pack("cb3s", b'!', 2, b'ixf'))
         for i in range(len(self.indices)):
             result.extend(struct.pack("I", self.indices[i]))
-        result.extend(struct.pack("cb4s", b'!', 1, b'wf'))
+        result.extend(struct.pack("cb2s", b'!', 1, b'wf'))
         for i in range(len(self.weight)):
             result.extend(struct.pack("I", self.weight[i]))
 
@@ -527,8 +530,8 @@ class PdxLocators():
 
         result.extend(struct.pack("8sb", b'[locator', 0))
 
-        for i in range(len(self.locators)):
-            result.extend(self.locators[i].get_binary_data())
+        for locator in self.locators:
+            result.extend(locator.get_binary_data())
 
         return result
 
@@ -550,11 +553,73 @@ class PdxLocator():
         result.extend(struct.pack("cb2sifff", b'!', 1, b'pf', 3, self.pos[0], self.pos[1], self.pos[2]))
         result.extend(struct.pack("cb2siffff", b'!', 1, b'qf', 4, self.quaternion[0], self.quaternion[1], self.quaternion[2], self.quaternion[3]))
         if self.parent != "":
-            result.extend(struct.pack("cb5s", b'!', 4, b'pas'))
+            result.extend(struct.pack("cb5s", b'!', 2, b'pas'))
             result.extend(struct.pack("II", 1, len(self.parent) + 1))
             result.extend(struct.pack(str(len(self.parent)) + "sb", self.parent.encode("UTF-8"), 0))
 
         return result
+
+# Pdx Anim File
+class PdxAnimInfo():
+    def __init__(self):
+        self.fps = 0.0
+        self.samples = 0
+        self.jointCount = 0
+
+        self.animJoints = []
+
+    def get_binary_data(self):
+        result = bytearray()
+
+        result.extend(struct.pack("5sb", b'[info', 0))
+
+        result.extend(struct.pack("cb4sif", b'!', 3, b'fpsf', 1, self.fps))
+        result.extend(struct.pack("cb3siI", b'!', 3, b'sai', 1, self.samples))
+        result.extend(struct.pack("cb2siI", b'!', 3, b'ji', 1, self.jointCount))
+
+        for animJoint in self.animJoints:
+            result.extend(animJoint.get_binary_data())
+
+        return result
+
+class PdxAnimJoint():
+    def __init__(self, name):
+        self.name = name
+        self.sampleMode = ""
+        self.translation = []
+        self.quaternion = []
+        self.size = 1
+
+    def get_binary_data(self):
+        result = bytearray()
+
+        result.extend(struct.pack("2s", b'[['))
+        result.extend(struct.pack(str(len(self.name)) + "sb", self.name.encode('UTF-8'), 0))
+
+        result.extend(struct.pack("cb3s", b'!', 6, b'sas'))
+        result.extend(struct.pack("II", 1, len(self.sampleMode) + 1))
+        result.extend(struct.pack(str(len(self.sampleMode)) + "sb", self.sampleMode.encode("UTF-8"), 0))
+
+        if len(self.translation) == 3:
+            result.extend(struct.pack("cb2sI", b'!', 2, b'tf', 3))
+
+            for t in self.translation:
+                result.extend(struct.pack("f", t))
+        else:
+            print("ERROR ::: AnimJoint Translation has invalid size")
+
+        if len(self.quaternion) == 4:
+            result.extend(struct.pack("cb2sI", b'!', 2, b'qf', 4))
+
+            for q in self.quaternion:
+                result.extend(struct.pack("f", q))
+        else:
+            print("ERROR ::: AnimJoint Quaternion has invalid size")
+
+        result.extend(struct.pack("cb2sII", b'!', 3, b'si', 1, self.jointCount))
+
+        return result
+
 
 # Temporary objects
 class PdxObject():
