@@ -191,7 +191,9 @@ class PdxFileImporter:
                     obj = bpy.data.objects.new(locator.name, None)
                     bpy.context.scene.objects.link(obj)
                     obj.empty_draw_size = 2
-                    obj.empty_draw_type = 'PLAIN_AXES'
+                    obj.empty_draw_type = 'SINGLE_ARROW'
                     obj.location = mathutils.Vector((locator.pos[0], locator.pos[1], locator.pos[2])) * mat_rot
+                    obj.rotation_mode = 'QUATERNION'
+                    obj.rotation_quaternion = locator.quaternion
             else:
                 print("ERROR ::: Invalid node found: " + str(node))
