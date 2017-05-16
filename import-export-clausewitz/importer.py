@@ -34,8 +34,14 @@ class PdxFileImporter:
                         obj = None
 
                         collisionShape = False
+                        skeletonPresent = False
+
+                        boneNames = None
 
                         if isinstance(shape.skeleton, pdx_data.PdxSkeleton):
+                            skeletonPresent = True
+                            boneNames = [""] * len(shape.skeleton.joints)
+
                             amt = bpy.data.armatures.new(name)
                             obj = bpy.data.objects.new(name, amt)
 
@@ -44,10 +50,9 @@ class PdxFileImporter:
                             scn.objects.active = obj
                             obj.select = True
 
-                            names = [""] * len(shape.skeleton.joints)
 
                             for joint in shape.skeleton.joints:
-                                names[joint.index] = joint.name
+                                boneNames[joint.index] = joint.name
 
                             bpy.ops.object.mode_set(mode='EDIT')
                             
@@ -63,7 +68,7 @@ class PdxFileImporter:
                                 #print(transformationMatrix.decompose())
 
                                 if joint.parent >= 0:
-                                    parent = amt.edit_bones[names[joint.parent]] 
+                                    parent = amt.edit_bones[boneNames[joint.parent]] 
                                     bone.parent = parent
                                     bone.use_connect = True 
                                 else:          
@@ -100,6 +105,19 @@ class PdxFileImporter:
                                 sub_object.select = True
 
                                 sub_mesh.from_pydata(meshData.verts, [], meshData.faces)
+
+                                if skeletonPresent:
+                                    for name in boneNames:
+                                        sub_object.vertex_groups.new(name)
+                                    for i in range(len(meshData.skin.indices) // meshData.skin.bonesPerVertice):
+                                        for j in range(meshData.skin.bonesPerVertice):
+                                            indice = meshData.skin.indices[i * meshData.skin.bonesPerVertice + j]
+                                            if indice >= 0:
+                                                bName = boneNames[indice]
+                                                weight = meshData.skin.weight[i * meshData.skin.bonesPerVertice + j]
+                                                if bName == "jaw":
+                                                    print("Adding a Vertex to " + bName + " with " + str(weight))
+                                                sub_object.vertex_groups[bName].add([i], weight, 'REPLACE')
 
                                 bm = bmesh.new()
                                 bm.from_mesh(sub_mesh)
@@ -161,6 +179,10 @@ class PdxFileImporter:
 
                         if collisionShape:
                             meshObj.draw_type = "WIRE"
+
+                        if skeletonPresent:
+                            bpy.ops.object.modifier_add(type='ARMATURE')
+                            bpy.context.object.modifiers["Armature"].object = obj
 
                     else:
                         print("ERROR ::: Invalid Object in World: " + str(shape))
