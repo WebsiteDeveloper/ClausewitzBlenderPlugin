@@ -199,5 +199,10 @@ class PdxFileImporter:
                     obj.location = mathutils.Vector((locator.pos[0], locator.pos[1], locator.pos[2])) * mat_rot
                     obj.rotation_mode = 'QUATERNION'
                     obj.rotation_quaternion = locator.quaternion
+
+                    #parentBoneName = locator.parent
+
+                    #constraint = obj.constraints.new('CHILD_OF')
+                    #constraint.target = parentBoneName
             else:
                 print("ERROR ::: Invalid node found: " + str(node))
