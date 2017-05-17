@@ -15,9 +15,57 @@ class PdxFileExporter:
 
     #Returns Array of Pdx_Meshs
     #Takes Mesh Object
-    def splitMeshes(self, obj, boneIDs=None):
-        #Viel Spass Apple Mit der Funktion
+    def splitMeshes(self, obj, transform_mat, boneIDs=None):
         print("Exporting and splitting Mesh...")
+
+        result = []
+
+        print(obj)
+        print(obj.data)
+        mesh = obj.data
+
+        bm_complete = bmesh.new()
+        bm_complete.from_mesh(mesh)
+        bmesh.ops.triangulate(bm_complete, faces=bm_complete.faces)
+
+        meshes_by_material = {}
+        for face in bm_complete.faces:
+            temp = []
+
+            for loop in face.loops:
+                temp.append(loop.vert.index)
+
+            faces.append(temp)
+
+
+
+        for vert in bm.verts:
+            vert.co = vert.co * transform_mat
+
+        bm.verts.index_update()
+        bm.faces.index_update()
+        bm.verts.ensure_lookup_table()
+
+        normals = []
+        verts = []
+        tangents = []
+        faces = []
+
+        for i in range(len(bm.verts)):
+            verts.append(bm.verts[i].co)
+            bm.verts[i].normal_update()
+            normal_temp = bm.verts[i].normal * transform_mat
+            normal_temp.normalize()
+            normals.append(normal_temp)
+
+        bm.faces.ensure_lookup_table()
+        bm.verts.ensure_lookup_table()
+        bm.verts.index_update()
+        bm.faces.index_update()
+
+        bm_complete.free()
+
+        return result
 
     def export_mesh(self, name, boneIDs=None):
         eul = mathutils.Euler((0.0, 0.0, math.radians(180.0)), 'XYZ')
@@ -38,7 +86,7 @@ class PdxFileExporter:
                 if obj.type == "MESH":
                     if obj.parent is None:
                         pdxShape = pdx_data.PdxShape(obj.name)
-                        pdxShape.meshes = self.splitMeshes(obj)
+                        pdxShape.meshes = self.splitMeshes(obj, transform_mat)
                         pdxWorld.objects.append(pdxShape)
                 elif obj.type == "ARMATURE":
                     if obj.parent is None:
@@ -46,7 +94,6 @@ class PdxFileExporter:
                         for child in bpy.data.objects:
                             if child.parent == obj:
                                 pdxSkeleton = pdx_data.PdxSkeleton()
-
                                 boneIDs = {}
 
                                 for i in range(len(obj.data.bones)):
@@ -68,10 +115,9 @@ class PdxFileExporter:
 
                                     pdxSkeleton.joints.append(pdxJoint)
 
-                                pdxShape.skeleton = pdxSkeleton
-
                                 pdxShape = pdx_data.PdxShape(obj.name)
-                                pdxShape.meshes = self.splitMeshes(obj, boneIDs)
+                                pdxShape.skeleton = pdxSkeleton
+                                pdxShape.meshes = self.splitMeshes(obj.children[0], transform_mat, boneIDs)
 
                                 pdxWorld.objects.append(pdxShape)
                 elif obj.type == "EMPTY":
