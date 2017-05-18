@@ -112,13 +112,17 @@ class PdxFileImporter:
                                 if skeletonPresent:
                                     for name in boneNames:
                                         sub_object.vertex_groups.new(name)
-                                    for i in range(len(meshData.skin.indices) // meshData.skin.bonesPerVertice):
-                                        for j in range(meshData.skin.bonesPerVertice):
-                                            indice = meshData.skin.indices[i * meshData.skin.bonesPerVertice + j]
-                                            if indice >= 0:
-                                                bName = boneNames[indice]
-                                                weight = meshData.skin.weight[i * meshData.skin.bonesPerVertice + j]
-                                                sub_object.vertex_groups[bName].add([i], weight, 'REPLACE')
+
+                                    if meshData.skin is not None:
+                                        for i in range(len(meshData.skin.indices) // meshData.skin.bonesPerVertice):
+                                            for j in range(meshData.skin.bonesPerVertice):
+                                                indice = meshData.skin.indices[i * meshData.skin.bonesPerVertice + j]
+                                                if indice >= 0:
+                                                    bName = boneNames[indice]
+                                                    weight = meshData.skin.weight[i * meshData.skin.bonesPerVertice + j]
+                                                    sub_object.vertex_groups[bName].add([i], weight, 'REPLACE')
+                                    else:
+                                        utils.Log.warning("No Skinning Data")
 
                                 bm = bmesh.new()
                                 bm.from_mesh(sub_mesh)
