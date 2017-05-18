@@ -116,7 +116,7 @@ class PdxFileExporter:
             tangents = []
 
             for i in range(len(bm.verts)):
-                verts.append(bm.verts[i].co)
+                verts.append(bm.verts[i].co.copy())
                 bm.verts[i].normal_update()
                 normal_temp = bm.verts[i].normal * transform_mat
                 normal_temp.normalize()
@@ -136,7 +136,7 @@ class PdxFileExporter:
 
             for face in bm.faces:
                 for loop in face.loops:
-                    uv_coords[loop.vert.index] = loop[uv_layer].uv
+                    uv_coords[loop.vert.index] = loop[uv_layer].uv.copy()
                     uv_coords[loop.vert.index][1] = 1 - uv_coords[loop.vert.index][1]
 
             max_index = 0
@@ -170,13 +170,13 @@ class PdxFileExporter:
 
                 faces.append(temp)
 
-            # bb_min = [math.inf, math.inf, math.inf]
-            # bb_max = [-math.inf, -math.inf, -math.inf]
+            bb_min = [math.inf, math.inf, math.inf]
+            bb_max = [-math.inf, -math.inf, -math.inf]
 
-            # for i in range(len(verts)):
-            #     for j in range(3):
-            #         bb_min[j] = min([verts[i][j], bb_min[j]])
-            #         bb_max[j] = max([verts[i][j], bb_max[j]])
+            for i in range(len(verts)):
+                for j in range(3):
+                    bb_min[j] = min([verts[i][j], bb_min[j]])
+                    bb_max[j] = max([verts[i][j], bb_max[j]])
 
             result_mesh = pdx_data.PdxMesh()
 
@@ -185,7 +185,7 @@ class PdxFileExporter:
             result_mesh.tangents = tangents
             result_mesh.uv_coords = uv_coords
             result_mesh.faces = faces
-            result_mesh.meshBounds = pdx_data.PdxBounds(0, 0) # bb_min, bb_max)
+            result_mesh.meshBounds = pdx_data.PdxBounds(bb_min, bb_max)
             result_mesh.material = pdx_data.PdxMaterial()
 
             diff_file = "test_diff"
@@ -291,6 +291,9 @@ class PdxFileExporter:
         result_file = io.open(self.filename, 'w+b')
 
         result_file.write(b'@@b@')
+        
+        print(pdxObjects)
+
         for i in range(len(pdxObjects)):
             result_file.write(pdxObjects[i].get_binary_data())
 
