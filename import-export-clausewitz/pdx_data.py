@@ -280,8 +280,8 @@ class PdxAsset():
         """Returns the Byte encoded Object Data"""
         result = bytearray()
 
-        result.extend(struct.pack("cb" + str(len(self.name)) + "s", b'!', len(self.name), self.name.encode('UTF-8')))
-        result.extend(struct.pack("cb", b'i', 2))
+        result.extend(struct.pack("<cb" + str(len(self.name)) + "s", b'!', len(self.name), self.name.encode('UTF-8')))
+        result.extend(struct.pack("<cb", b'i', 2))
         result.extend(struct.pack(">iibbb", 1, 0, 0, 0, 0))
 
         print(result)
@@ -295,7 +295,7 @@ class PdxWorld():
         """Returns the Byte encoded Object Data"""
         result = bytearray()
 
-        result.extend(struct.pack("7sb", b'[object', 0))
+        result.extend(struct.pack("<7sb", b'[object', 0))
 
         for o in self.objects:
             result.extend(o.get_binary_data())
@@ -311,8 +311,8 @@ class PdxShape():
     def get_binary_data(self):
         result = bytearray()
 
-        result.extend(struct.pack("2s", b'[['))
-        result.extend(struct.pack(str(len(self.name)) + "sb", self.name.encode('UTF-8'), 0))
+        result.extend(struct.pack("<2s", b'[['))
+        result.extend(struct.pack("<" + str(len(self.name)) + "sb", self.name.encode('UTF-8'), 0))
         
         if self.meshes is not None:
             for mesh in self.meshes:
@@ -332,7 +332,7 @@ class PdxSkeleton():
     def get_binary_data(self):
         result = bytearray()
 
-        result.extend(struct.pack("11sb", b'[[[skeleton', 0))
+        result.extend(struct.pack("<11sb", b'[[[skeleton', 0))
 
         for joint in self.joints:
             result.extend(joint.get_binary_data())
@@ -349,17 +349,18 @@ class PdxJoint():
     def get_binary_data(self):
         result = bytearray()
 
-        result.extend(struct.pack("4s", b'[[[['))
-        result.extend(struct.pack(str(len(self.name)) + "sb", self.name.encode('UTF-8'), 0))
+        result.extend(struct.pack("<4s", b'[[[['))
+        result.extend(struct.pack("<" + str(len(self.name)) + "sb", self.name.encode('UTF-8'), 0))
 
-        result.extend(struct.pack("cb3sII", b'!', 2, b'ixi', 1, self.index))
+        result.extend(struct.pack("<cb3sII", b'!', 2, b'ixi', 1, self.index))
+
         if self.parent != -1:
-            result.extend(struct.pack("cb3sII", b'!', 2, b'pai', 1, self.parent))
+            result.extend(struct.pack("<cb3sII", b'!', 2, b'pai', 1, self.parent))
 
         if len(self.transform) == 12:
-            result.extend(struct.pack("cb3sI", b'!', 2, b'txf', 12))
+            result.extend(struct.pack("<cb3sI", b'!', 2, b'txf', 12))
             for t in self.transform:
-                result.extend(struct.pack("f",t))
+                result.extend(struct.pack("<f",t))
 
         return result
 
@@ -381,50 +382,50 @@ class PdxMesh():
         """Returns the Byte encoded Object Data"""
         result = bytearray()
 
-        result.extend(struct.pack("7sb", b'[[[mesh', 0))
+        result.extend(struct.pack("<7sb", b'[[[mesh', 0))
 
         if len(self.verts) > 0:
-            result.extend(struct.pack("cb2sI", b'!', 1, b'pf', len(self.verts) * 3))
+            result.extend(struct.pack("<cb2sI", b'!', 1, b'pf', len(self.verts) * 3))
 
             for i in range(len(self.verts)):
                 for j in range(3):
-                    result.extend(struct.pack("f", self.verts[i][j]))
+                    result.extend(struct.pack("<f", self.verts[i][j]))
         else:
             print("ERROR ::: No Vertices found!")
 
         if len(self.faces) > 0:
-            result.extend(struct.pack("cb4sI", b'!', 3, b'trii', len(self.faces) * 3))
+            result.extend(struct.pack("<cb4sI", b'!', 3, b'trii', len(self.faces) * 3))
 
             for i in range(len(self.faces)):
                 for j in range(3):
-                    result.extend(struct.pack("I", self.faces[i][j]))
+                    result.extend(struct.pack("<I", self.faces[i][j]))
         else:
             print("ERROR ::: No Faces found!")
 
         if len(self.normals) > 0:
-            result.extend(struct.pack("cb2sI", b'!', 1, b'nf', len(self.normals) * 3))
+            result.extend(struct.pack("<cb2sI", b'!', 1, b'nf', len(self.normals) * 3))
 
             for i in range(len(self.normals)):
                 for j in range(3):
-                    result.extend(struct.pack("f", self.normals[i][j]))
+                    result.extend(struct.pack("<f", self.normals[i][j]))
         else:
             print("WARNING ::: No Normals found! (Ok for Collision Material)")
 
         if len(self.tangents) > 0:
-            result.extend(struct.pack("cb3sI", b'!', 2, b'taf', len(self.tangents) * 4))
+            result.extend(struct.pack("<cb3sI", b'!', 2, b'taf', len(self.tangents) * 4))
 
             for i in range(len(self.tangents)):
                 for j in range(4):
-                    result.extend(struct.pack("f", self.tangents[i][j]))
+                    result.extend(struct.pack("<f", self.tangents[i][j]))
         else:
             print("WARNING ::: No Tangents found! (Ok for Collision Material)")
 
         if len(self.uv_coords) > 0:
-            result.extend(struct.pack("cb3sI", b'!', 2, b'u0f', len(self.uv_coords) * 2))
+            result.extend(struct.pack("<cb3sI", b'!', 2, b'u0f', len(self.uv_coords) * 2))
 
             for i in range(len(self.uv_coords)):
                 for j in range(2):
-                    result.extend(struct.pack("f", self.uv_coords[i][j]))
+                    result.extend(struct.pack("<f", self.uv_coords[i][j]))
         else:
             print("WARNING ::: No UV0 found! (Ok for Collision Material)")
 
@@ -458,25 +459,25 @@ class PdxMaterial():
         """Returns the Byte encoded Object Data"""
         result = bytearray()
 
-        result.extend(struct.pack("12sb", b'[[[[material', 0))
+        result.extend(struct.pack("<12sb", b'[[[[material', 0))
 
-        result.extend(struct.pack("cb7s", b'!', 6, b'shaders'))
-        result.extend(struct.pack("II", 1, len(self.shader) + 1))
-        result.extend(struct.pack(str(len(self.shader)) + "sb", self.shader.encode("UTF-8"), 0))
+        result.extend(struct.pack("<cb7s", b'!', 6, b'shaders'))
+        result.extend(struct.pack("<II", 1, len(self.shader) + 1))
+        result.extend(struct.pack("<" + str(len(self.shader)) + "sb", self.shader.encode("UTF-8"), 0))
 
         if self.shader != "Collision":
 
-            result.extend(struct.pack("cb5s", b'!', 4, b'diffs'))
-            result.extend(struct.pack("II", 1, len(self.diff) + 1))
-            result.extend(struct.pack(str(len(self.diff)) + "sb", self.diff.encode("UTF-8"), 0))
+            result.extend(struct.pack("<cb5s", b'!', 4, b'diffs'))
+            result.extend(struct.pack("<II", 1, len(self.diff) + 1))
+            result.extend(struct.pack("<" + str(len(self.diff)) + "sb", self.diff.encode("UTF-8"), 0))
 
-            result.extend(struct.pack("cb2s", b'!', 1, b'ns'))
-            result.extend(struct.pack("II", 1, len(self.normal) + 1))
-            result.extend(struct.pack(str(len(self.normal)) + "sb", self.normal.encode("UTF-8"), 0))
+            result.extend(struct.pack("<cb2s", b'!', 1, b'ns'))
+            result.extend(struct.pack("<II", 1, len(self.normal) + 1))
+            result.extend(struct.pack("<" + str(len(self.normal)) + "sb", self.normal.encode("UTF-8"), 0))
 
-            result.extend(struct.pack("cb5s", b'!', 4, b'specs'))
-            result.extend(struct.pack("II", 1, len(self.spec) + 1))
-            result.extend(struct.pack(str(len(self.spec)) + "sb", self.spec.encode("UTF-8"), 0))
+            result.extend(struct.pack("<cb5s", b'!', 4, b'specs'))
+            result.extend(struct.pack("<II", 1, len(self.spec) + 1))
+            result.extend(struct.pack("<" + str(len(self.spec)) + "sb", self.spec.encode("UTF-8"), 0))
 
         return result
 
@@ -489,12 +490,12 @@ class PdxBounds():
         """Returns the Byte encoded Object Data"""
         result = bytearray()
 
-        result.extend(struct.pack("8sb", b'[[[[aabb', 0))
+        result.extend(struct.pack("<8sb", b'[[[[aabb', 0))
 
-        result.extend(struct.pack("cb4s", b'!', 3, b'minf'))
-        result.extend(struct.pack("Ifff", 3, self.min[0], self.min[1], self.min[2]))
-        result.extend(struct.pack("cb4s", b'!', 3, b'maxf'))
-        result.extend(struct.pack("Ifff", 3, self.max[0], self.max[1], self.max[2]))
+        result.extend(struct.pack("<cb4s", b'!', 3, b'minf'))
+        result.extend(struct.pack("<Ifff", 3, self.min[0], self.min[1], self.min[2]))
+        result.extend(struct.pack("<cb4s", b'!', 3, b'maxf'))
+        result.extend(struct.pack("<Ifff", 3, self.max[0], self.max[1], self.max[2]))
 
         return result
 
@@ -507,15 +508,15 @@ class PdxSkin():
     def get_binary_data(self):
         result = bytearray()
 
-        result.extend(struct.pack("8sb", b'[[[[skin', 0))
+        result.extend(struct.pack("<8sb", b'[[[[skin', 0))
 
-        result.extend(struct.pack("cb6sII", b'!', 5, b'bonesi', 1, self.bonesPerVertice))
-        result.extend(struct.pack("cb3s", b'!', 2, b'ixf'))
+        result.extend(struct.pack("<cb6sII", b'!', 5, b'bonesi', 1, self.bonesPerVertice))
+        result.extend(struct.pack("<cb3s", b'!', 2, b'ixf'))
         for i in range(len(self.indices)):
-            result.extend(struct.pack("I", self.indices[i]))
-        result.extend(struct.pack("cb2s", b'!', 1, b'wf'))
+            result.extend(struct.pack("<I", self.indices[i]))
+        result.extend(struct.pack("<cb2s", b'!', 1, b'wf'))
         for i in range(len(self.weight)):
-            result.extend(struct.pack("I", self.weight[i]))
+            result.extend(struct.pack("<I", self.weight[i]))
 
         return result
 
@@ -528,7 +529,7 @@ class PdxLocators():
         """Returns the Byte encoded Object Data"""
         result = bytearray()
 
-        result.extend(struct.pack("8sb", b'[locator', 0))
+        result.extend(struct.pack("<8sb", b'[locator', 0))
 
         for locator in self.locators:
             result.extend(locator.get_binary_data())
@@ -547,15 +548,15 @@ class PdxLocator():
         """Returns the Byte encoded Object Data"""
         result = bytearray()
 
-        result.extend(struct.pack("2s", b'[['))
-        result.extend(struct.pack(str(len(self.name)) + "sb", self.name.encode('UTF-8'), 0))
+        result.extend(struct.pack("<2s", b'[['))
+        result.extend(struct.pack("<" + str(len(self.name)) + "sb", self.name.encode('UTF-8'), 0))
 
-        result.extend(struct.pack("cb2sifff", b'!', 1, b'pf', 3, self.pos[0], self.pos[1], self.pos[2]))
-        result.extend(struct.pack("cb2siffff", b'!', 1, b'qf', 4, self.quaternion[0], self.quaternion[1], self.quaternion[2], self.quaternion[3]))
+        result.extend(struct.pack("<cb2sifff", b'!', 1, b'pf', 3, self.pos[0], self.pos[1], self.pos[2]))
+        result.extend(struct.pack("<cb2siffff", b'!', 1, b'qf', 4, self.quaternion[0], self.quaternion[1], self.quaternion[2], self.quaternion[3]))
         if self.parent != "":
-            result.extend(struct.pack("cb5s", b'!', 2, b'pas'))
-            result.extend(struct.pack("II", 1, len(self.parent) + 1))
-            result.extend(struct.pack(str(len(self.parent)) + "sb", self.parent.encode("UTF-8"), 0))
+            result.extend(struct.pack("<cb5s", b'!', 2, b'pas'))
+            result.extend(struct.pack("<II", 1, len(self.parent) + 1))
+            result.extend(struct.pack("<" + str(len(self.parent)) + "sb", self.parent.encode("UTF-8"), 0))
 
         return result
 
@@ -571,11 +572,11 @@ class PdxAnimInfo():
     def get_binary_data(self):
         result = bytearray()
 
-        result.extend(struct.pack("5sb", b'[info', 0))
+        result.extend(struct.pack("<5sb", b'[info', 0))
 
-        result.extend(struct.pack("cb4sif", b'!', 3, b'fpsf', 1, self.fps))
-        result.extend(struct.pack("cb3siI", b'!', 3, b'sai', 1, self.samples))
-        result.extend(struct.pack("cb2siI", b'!', 3, b'ji', 1, self.jointCount))
+        result.extend(struct.pack("<cb4sif", b'!', 3, b'fpsf', 1, self.fps))
+        result.extend(struct.pack("<cb3siI", b'!', 3, b'sai', 1, self.samples))
+        result.extend(struct.pack("<cb2siI", b'!', 3, b'ji', 1, self.jointCount))
 
         for animJoint in self.animJoints:
             result.extend(animJoint.get_binary_data())
@@ -593,30 +594,30 @@ class PdxAnimJoint():
     def get_binary_data(self):
         result = bytearray()
 
-        result.extend(struct.pack("2s", b'[['))
-        result.extend(struct.pack(str(len(self.name)) + "sb", self.name.encode('UTF-8'), 0))
+        result.extend(struct.pack("<2s", b'[['))
+        result.extend(struct.pack("<" + str(len(self.name)) + "sb", self.name.encode('UTF-8'), 0))
 
-        result.extend(struct.pack("cb3s", b'!', 6, b'sas'))
-        result.extend(struct.pack("II", 1, len(self.sampleMode) + 1))
-        result.extend(struct.pack(str(len(self.sampleMode)) + "sb", self.sampleMode.encode("UTF-8"), 0))
+        result.extend(struct.pack("<cb3s", b'!', 6, b'sas'))
+        result.extend(struct.pack("<II", 1, len(self.sampleMode) + 1))
+        result.extend(struct.pack("<" + str(len(self.sampleMode)) + "sb", self.sampleMode.encode("UTF-8"), 0))
 
         if len(self.translation) == 3:
-            result.extend(struct.pack("cb2sI", b'!', 2, b'tf', 3))
+            result.extend(struct.pack("<cb2sI", b'!', 2, b'tf', 3))
 
             for t in self.translation:
-                result.extend(struct.pack("f", t))
+                result.extend(struct.pack("<f", t))
         else:
             print("ERROR ::: AnimJoint Translation has invalid size")
 
         if len(self.quaternion) == 4:
-            result.extend(struct.pack("cb2sI", b'!', 2, b'qf', 4))
+            result.extend(struct.pack("<cb2sI", b'!', 2, b'qf', 4))
 
             for q in self.quaternion:
-                result.extend(struct.pack("f", q))
+                result.extend(struct.pack("<f", q))
         else:
             print("ERROR ::: AnimJoint Quaternion has invalid size")
 
-        result.extend(struct.pack("cb2sII", b'!', 3, b'si', 1, self.jointCount))
+        result.extend(struct.pack("<cb2sII", b'!', 3, b'si', 1, self.jointCount))
 
         return result
 

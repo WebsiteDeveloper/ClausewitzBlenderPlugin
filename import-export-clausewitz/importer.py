@@ -68,6 +68,7 @@ class PdxFileImporter:
                                 #print(transformationMatrix.decompose())
 
                                 if joint.parent >= 0:
+                                    print("Joint: " + joint.name)
                                     parent = amt.edit_bones[boneNames[joint.parent]] 
                                     bone.parent = parent
                                     bone.use_connect = True 
@@ -81,6 +82,7 @@ class PdxFileImporter:
                                 mat_temp.resize_4x4()
 
                                 bone.tail = -components[0] * mat_temp * mat_rot
+                                print(str(bone.tail))
 
                             bpy.ops.object.mode_set(mode='OBJECT')
 
@@ -115,8 +117,6 @@ class PdxFileImporter:
                                             if indice >= 0:
                                                 bName = boneNames[indice]
                                                 weight = meshData.skin.weight[i * meshData.skin.bonesPerVertice + j]
-                                                if bName == "jaw":
-                                                    print("Adding a Vertex to " + bName + " with " + str(weight))
                                                 sub_object.vertex_groups[bName].add([i], weight, 'REPLACE')
 
                                 bm = bmesh.new()

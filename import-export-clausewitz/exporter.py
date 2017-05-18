@@ -47,26 +47,33 @@ class PdxFileExporter:
                             if child.parent == obj:
                                 pdxSkeleton = pdx_data.PdxSkeleton()
 
+                                rootJoint = pdx_data.PdxJoint("root")
+                                rootJoint.index = 0
+                                rootJoint.transform = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
+
+                                pdxSkeleton.joints.append(rootJoint)
+
                                 boneIDs = {}
 
                                 for i in range(len(obj.data.bones)):
                                     bone = obj.data.bones[i]
-                                    boneIDs[bone.name] = i
+                                    boneIDs[bone.name] = i + 1
 
                                 for i in range(len(obj.data.bones)):
                                     bone = obj.data.bones[i]
-                                    print(bone.name)
+                                    print("Joint: " + bone.name)
                                     print(str(boneIDs[bone.name]))
                                     pdxJoint = pdx_data.PdxJoint(bone.name)
-                                    pdxJoint.index = i
-                                    print(str(bone.parent))
+                                    pdxJoint.index = boneIDs[bone.name]
                                     if bone.parent is not None:
-                                        print(str(boneIDs[bone.parent.name]))
+                                        print("Parent: " + str(bone.parent))
+                                        print("Parent ID: " + str(boneIDs[bone.parent.name]))
                                         pdxJoint.parent = boneIDs[bone.parent.name]
                                     else:
                                         print("Root Bone")
+                                        pdxJoint.parent = rootJoint.index
 
-                                    pdxJoint.transform = [0] * 12
+                                    pdxJoint.transform = [1, 0, 0, 0, 1, 0, 0, 0, 1, bone.tail[0], bone.tail[1], bone.tail[2]]
 
                                     pdxSkeleton.joints.append(pdxJoint)
 
