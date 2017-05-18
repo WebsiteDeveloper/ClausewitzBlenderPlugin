@@ -15,9 +15,205 @@ class PdxFileExporter:
 
     #Returns Array of Pdx_Meshs
     #Takes Mesh Object
-    def splitMeshes(self, obj, boneIDs=None):
-        #Viel Spass Apple Mit der Funktion
-        print("Exporting and splitting Mesh...")
+    def splitMeshes(self, obj, transform_mat, boneIDs=None):
+        utils.Log.info("Exporting and splitting Mesh...")
+
+        result = []
+
+        bmeshes = []
+        materials = []
+        faces_for_materials = {}
+
+        print(obj)
+        print(obj.data)
+        mesh = obj.data
+
+        utils.Log.info("Collecting Materials...")
+        for mat_slot in obj.material_slots:
+            if mat_slot.material is not None:
+                faces_for_materials[mat_slot.material.name] = []
+                materials.append(mat_slot.material.name)
+
+        utils.Log.debug(faces_for_materials)
+
+        utils.Log.info("Getting Faces for Materials...")
+        for face in mesh.polygons:
+            #print("Face: ", face.index, " Material Index: ", face.material_index)
+            slot = obj.material_slots[face.material_index]
+            mat = slot.material
+
+            if mat is not None:
+                faces_for_materials[mat.name].append(face.index)
+            else:
+                utils.Log.notice("No Material for Face: " + str(face.index) + " in Slot: " + str(face.material_index))
+
+        #print(faces_for_materials)
+
+        bm_complete = bmesh.new()
+        bm_complete.from_mesh(mesh)
+
+        bm_complete.faces.ensure_lookup_table()
+        bm_complete.verts.ensure_lookup_table()
+        bm_complete.verts.index_update()
+        bm_complete.faces.index_update()
+
+        utils.Log.debug(len(bm_complete.faces))
+
+        for material in materials:
+            removed_count = 0
+
+            temp = bm_complete.copy()
+
+            stray_vertices = []
+
+            temp.faces.ensure_lookup_table()
+            temp.verts.ensure_lookup_table()
+            temp.verts.index_update()
+            temp.faces.index_update()
+
+            utils.Log.info("Removing Faces...")
+            for index in faces_for_materials[material]:
+                temp.faces.remove(temp.faces[index - removed_count])
+                temp.faces.ensure_lookup_table()
+                removed_count += 1
+
+            for vert in temp.verts:
+                if len(vert.link_faces) == 0:
+                    stray_vertices.append(vert)
+
+            utils.Log.info("Remove Stray Vertices...")
+            for vert in stray_vertices:
+                temp.verts.remove(vert)
+                temp.verts.ensure_lookup_table()
+
+            bmeshes.append(temp)
+
+        # TODO: Split mesh if it has more than 35000 verts (maybe check for actual Clausewitz-Engine limitation)
+        utils.Log.info("Triangulating Meshes...")
+        for bm in bmeshes:
+            bmesh.ops.triangulate(bm, faces=bm.faces)
+
+        utils.Log.info("Generating PdxMeshes...")
+        material_temp_index = 0
+        for bm in bmeshes:
+            for vert in bm.verts:
+                vert.co = vert.co * transform_mat
+
+            bm.verts.index_update()
+            bm.faces.index_update()
+            bm.verts.ensure_lookup_table()
+
+            normals = []
+            verts = []
+            tangents = []
+
+            for i in range(len(bm.verts)):
+                verts.append(bm.verts[i].co.copy())
+                bm.verts[i].normal_update()
+                normal_temp = bm.verts[i].normal * transform_mat
+                normal_temp.normalize()
+                normals.append(normal_temp)
+
+            bm.faces.ensure_lookup_table()
+            bm.verts.ensure_lookup_table()
+            bm.verts.index_update()
+            bm.faces.index_update()
+
+            uv_coords = []
+            uv_layer = bm.loops.layers.uv.active
+
+            for face in bm.faces:
+                for loop in face.loops:
+                    uv_coords.append((0, 0))
+
+            for face in bm.faces:
+                for loop in face.loops:
+                    uv_coords[loop.vert.index] = loop[uv_layer].uv.copy()
+                    uv_coords[loop.vert.index][1] = 1 - uv_coords[loop.vert.index][1]
+
+            max_index = 0
+
+            bm.faces.ensure_lookup_table()
+            bm.verts.ensure_lookup_table()
+            bm.verts.index_update()
+            bm.faces.index_update()
+
+            for i in range(len(bm.verts)):
+                if len(bm.verts[i].link_faces) > 0:#For Models with stray vertices...
+                    tangents.append(bm.verts[i].link_faces[0].calc_tangent_vert_diagonal().to_4d() * transform_mat)
+                else:
+                    tangents.append((0.0, 0.0, 0.0, 0.0))
+
+            #Trim data, remove empty bytes
+            for i in range(len(uv_coords)):
+                if uv_coords[i][0] == 0.0 and uv_coords[i][1] == 0.0:
+                    max_index = i - 1
+                    break
+
+            del uv_coords[max_index:(len(uv_coords) - 1)]
+
+            faces = []
+
+            for face in bm.faces:
+                temp = []
+
+                for loop in face.loops:
+                    temp.append(loop.vert.index)
+
+                faces.append(temp)
+
+            bb_min = [math.inf, math.inf, math.inf]
+            bb_max = [-math.inf, -math.inf, -math.inf]
+
+            for i in range(len(verts)):
+                for j in range(3):
+                    bb_min[j] = min([verts[i][j], bb_min[j]])
+                    bb_max[j] = max([verts[i][j], bb_max[j]])
+
+            result_mesh = pdx_data.PdxMesh()
+
+            result_mesh.verts = verts
+            result_mesh.normals = normals
+            result_mesh.tangents = tangents
+            result_mesh.uv_coords = uv_coords
+            result_mesh.faces = faces
+            result_mesh.meshBounds = pdx_data.PdxBounds(bb_min, bb_max)
+            result_mesh.material = pdx_data.PdxMaterial()
+
+            diff_file = "test_diff"
+
+            if len(obj.material_slots) > 0:
+                mat = obj.material_slots[material_temp_index].material
+
+                for mtex_slot in mat.texture_slots:
+                    if mtex_slot:
+                        if hasattr(mtex_slot.texture, 'image'):
+                            if mtex_slot.texture.image is None:
+                                utils.Log.warning("Texture Image File not loaded")
+                            else:
+                                diff_file = os.path.basename(mtex_slot.texture.image.filepath)
+            else:
+                diff_file = os.path.basename(mesh.uv_textures[0].data[0].image.filepath)
+
+            # TODO: Get Skinning information
+
+            result_mesh.material.shader = "PdxMeshShip"
+            result_mesh.material.diff = diff_file
+            result_mesh.material.spec = diff_file.replace("diff", "spec")
+            result_mesh.material.normal = diff_file.replace("diff", "normal")
+
+            result.append(result_mesh)
+            material_temp_index += 1
+
+
+        utils.Log.info("Cleaning up BMesh...")
+        bm_complete.free()
+        for bm in bmeshes:
+            print(bm)
+            bm.free()
+
+        utils.Log.info("Return resulting Meshes...")
+        return result
 
     def export_mesh(self, name, boneIDs=None):
         eul = mathutils.Euler((0.0, 0.0, math.radians(180.0)), 'XYZ')
@@ -38,7 +234,7 @@ class PdxFileExporter:
                 if obj.type == "MESH":
                     if obj.parent is None:
                         pdxShape = pdx_data.PdxShape(obj.name)
-                        pdxShape.meshes = self.splitMeshes(obj)
+                        pdxShape.meshes = self.splitMeshes(obj, transform_mat)
                         pdxWorld.objects.append(pdxShape)
                 elif obj.type == "ARMATURE":
                     if obj.parent is None:
@@ -77,10 +273,9 @@ class PdxFileExporter:
 
                                     pdxSkeleton.joints.append(pdxJoint)
 
-                                pdxShape.skeleton = pdxSkeleton
-
                                 pdxShape = pdx_data.PdxShape(obj.name)
-                                pdxShape.meshes = self.splitMeshes(obj, boneIDs)
+                                pdxShape.skeleton = pdxSkeleton
+                                pdxShape.meshes = self.splitMeshes(obj.children[0], transform_mat, boneIDs)
 
                                 pdxWorld.objects.append(pdxShape)
                 elif obj.type == "EMPTY":
@@ -99,9 +294,12 @@ class PdxFileExporter:
         if len(pdxLocators.locators) > 0:
             pdxObjects.append(pdxLocators)
 
-        result_file = io.open(self.filename, 'wb')
+        result_file = io.open(self.filename, 'w+b')
 
         result_file.write(b'@@b@')
+        
+        print(pdxObjects)
+
         for i in range(len(pdxObjects)):
             result_file.write(pdxObjects[i].get_binary_data())
 

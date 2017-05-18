@@ -43,6 +43,7 @@ class PdxFileImporter:
                             boneNames = [""] * len(shape.skeleton.joints)
 
                             amt = bpy.data.armatures.new(name)
+                            amt.draw_type = 'STICK'
                             obj = bpy.data.objects.new(name, amt)
 
                             scn = bpy.context.scene
