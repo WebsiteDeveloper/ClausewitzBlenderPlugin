@@ -88,12 +88,13 @@ class PdxFileExporter:
 
             bmeshes.append(temp)
 
-        # TODO: Split mesh if it has more than 40000 verts (maybe check for actual Clausewitz-Engine limitation)
+        # TODO: Split mesh if it has more than 35000 verts (maybe check for actual Clausewitz-Engine limitation)
         print("Triangulating Meshes...")
         for bm in bmeshes:
             bmesh.ops.triangulate(bm, faces=bm.faces)
 
         print("Generating PdxMeshes...")
+        material_temp_index = 0
         for bm in bmeshes:
             for vert in bm.verts:
                 vert.co = vert.co * transform_mat
@@ -181,18 +182,18 @@ class PdxFileExporter:
 
             diff_file = "test_diff"
 
-            # TODO: Implement Texture Export
-            # if len(bpy.data.objects[name].material_slots) > 0:
-            #     for mat_slot in bpy.data.objects[name].material_slots:
-            #         for mtex_slot in mat_slot.material.texture_slots:
-            #             if mtex_slot:
-            #                 if hasattr(mtex_slot.texture, 'image'):
-            #                     if mtex_slot.texture.image is None:
-            #                         bpy.ops.error.message('INVOKE_SCREEN', message="The Texture Image file is not loaded")
-            #                     else:
-            #                         diff_file = os.path.basename(mtex_slot.texture.image.filepath)
-            # else:
-            #     diff_file = os.path.basename(bpy.data.meshes[name].uv_textures[0].data[0].image.filepath)
+            if len(obj.material_slots) > 0:
+                mat = obj.material_slots[material_temp_index].material
+
+                for mtex_slot in mat.texture_slots:
+                    if mtex_slot:
+                        if hasattr(mtex_slot.texture, 'image'):
+                            if mtex_slot.texture.image is None:
+                                print("WARNING ::: Texture Image File not loaded")
+                            else:
+                                diff_file = os.path.basename(mtex_slot.texture.image.filepath)
+            else:
+                diff_file = os.path.basename(mesh.uv_textures[0].data[0].image.filepath)
 
             # TODO: Get Skinning information
 
@@ -202,6 +203,7 @@ class PdxFileExporter:
             result_mesh.material.normal = diff_file.replace("diff", "normal")
 
             result.append(result_mesh)
+            material_temp_index += 1
 
 
         print("Cleaning up BMesh...")
