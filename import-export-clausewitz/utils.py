@@ -155,6 +155,8 @@ class LogLevel:
             return ""
 
 class Log:
+    MIN_LOG_LEVEL = LogLevel.DEBUG
+
     @staticmethod
     def debug(message):
         Log.log(LogLevel.DEBUG, message)
@@ -189,4 +191,5 @@ class Log:
 
     @staticmethod
     def log(level, message):
-        print(str(datetime.datetime.now()).split('.')[0] + " - " + LogLevel.GetLogLevelString(level) + " ::: " + str(message))
+        if level >= Log.MIN_LOG_LEVEL:
+            print(str(datetime.datetime.now()).split('.')[0] + " - " + LogLevel.GetLogLevelString(level) + " ::: " + str(message))
