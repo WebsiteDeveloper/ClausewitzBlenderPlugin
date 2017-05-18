@@ -64,15 +64,6 @@ class PdxFileExporter:
 
             temp = bm_complete.copy()
 
-            #temp.faces.ensure_lookup_table()
-
-            #face_list = []
-
-            #for index in faces_for_materials[material]:
-            #    face_list.append(temp.faces[index])
-
-            #temp2 = bmesh.new()
-            #bmesh.ops.split(temp, geom=face_list, dest=temp2)
             stray_vertices = []
 
             temp.faces.ensure_lookup_table()
@@ -146,19 +137,19 @@ class PdxFileExporter:
             bm.verts.index_update()
             bm.faces.index_update()
 
-            # for i in range(len(bm.verts)):
-            #     if len(bm.verts[i].link_faces) > 0:#For Models with stray vertices...
-            #         tangents.append(bm.verts[i].link_faces[0].calc_tangent_vert_diagonal().to_4d() * transform_mat)#(0.0, 0.0, 0.0, 0.0))
-            #     else:
-            #         tangents.append((0.0, 0.0, 0.0, 0.0))
+            for i in range(len(bm.verts)):
+                if len(bm.verts[i].link_faces) > 0:#For Models with stray vertices...
+                    tangents.append(bm.verts[i].link_faces[0].calc_tangent_vert_diagonal().to_4d() * transform_mat)
+                else:
+                    tangents.append((0.0, 0.0, 0.0, 0.0))
 
-            # #Trim data, remove empty bytes
-            # for i in range(len(uv_coords)):
-            #     if uv_coords[i][0] == 0.0 and uv_coords[i][1] == 0.0:
-            #         max_index = i - 1
-            #         break
+            #Trim data, remove empty bytes
+            for i in range(len(uv_coords)):
+                if uv_coords[i][0] == 0.0 and uv_coords[i][1] == 0.0:
+                    max_index = i - 1
+                    break
 
-            # del uv_coords[max_index:(len(uv_coords) - 1)]
+            del uv_coords[max_index:(len(uv_coords) - 1)]
 
             faces = []
 
@@ -190,6 +181,7 @@ class PdxFileExporter:
 
             diff_file = "test_diff"
 
+            # TODO: Implement Texture Export
             # if len(bpy.data.objects[name].material_slots) > 0:
             #     for mat_slot in bpy.data.objects[name].material_slots:
             #         for mtex_slot in mat_slot.material.texture_slots:
@@ -201,6 +193,8 @@ class PdxFileExporter:
             #                         diff_file = os.path.basename(mtex_slot.texture.image.filepath)
             # else:
             #     diff_file = os.path.basename(bpy.data.meshes[name].uv_textures[0].data[0].image.filepath)
+
+            # TODO: Get Skinning information
 
             result_mesh.material.shader = "PdxMeshShip"
             result_mesh.material.diff = diff_file
