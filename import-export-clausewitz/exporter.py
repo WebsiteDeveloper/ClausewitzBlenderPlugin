@@ -16,7 +16,7 @@ class PdxFileExporter:
     #Returns Array of Pdx_Meshs
     #Takes Mesh Object
     def splitMeshes(self, obj, transform_mat, boneIDs=None):
-        print("Exporting and splitting Mesh...")
+        utils.Log.info("Exporting and splitting Mesh...")
 
         result = []
 
@@ -28,15 +28,15 @@ class PdxFileExporter:
         print(obj.data)
         mesh = obj.data
 
-        print("Collecting Materials...")
+        utils.Log.info("Collecting Materials...")
         for mat_slot in obj.material_slots:
             if mat_slot.material is not None:
                 faces_for_materials[mat_slot.material.name] = []
                 materials.append(mat_slot.material.name)
 
-        print(faces_for_materials)
+        utils.Log.debug(faces_for_materials)
 
-        print("Getting Faces for Materials...")
+        utils.Log.info("Getting Faces for Materials...")
         for face in mesh.polygons:
             #print("Face: ", face.index, " Material Index: ", face.material_index)
             slot = obj.material_slots[face.material_index]
@@ -45,7 +45,7 @@ class PdxFileExporter:
             if mat is not None:
                 faces_for_materials[mat.name].append(face.index)
             else:
-                print("No Material for Face: ", face.index, " in Slot: ", face.material_index)
+                utils.Log.notice("No Material for Face: " + str(face.index) + " in Slot: " + str(face.material_index))
 
         #print(faces_for_materials)
 
@@ -57,7 +57,7 @@ class PdxFileExporter:
         bm_complete.verts.index_update()
         bm_complete.faces.index_update()
 
-        print(len(bm_complete.faces))
+        utils.Log.debug(len(bm_complete.faces))
 
         for material in materials:
             removed_count = 0
@@ -71,7 +71,7 @@ class PdxFileExporter:
             temp.verts.index_update()
             temp.faces.index_update()
 
-            print("Removing Faces...")
+            utils.Log.info("Removing Faces...")
             for index in faces_for_materials[material]:
                 temp.faces.remove(temp.faces[index - removed_count])
                 temp.faces.ensure_lookup_table()
@@ -81,7 +81,7 @@ class PdxFileExporter:
                 if len(vert.link_faces) == 0:
                     stray_vertices.append(vert)
 
-            print("Remove Stray Vertices...")
+            utils.Log.info("Remove Stray Vertices...")
             for vert in stray_vertices:
                 temp.verts.remove(vert)
                 temp.verts.ensure_lookup_table()
@@ -89,11 +89,11 @@ class PdxFileExporter:
             bmeshes.append(temp)
 
         # TODO: Split mesh if it has more than 35000 verts (maybe check for actual Clausewitz-Engine limitation)
-        print("Triangulating Meshes...")
+        utils.Log.info("Triangulating Meshes...")
         for bm in bmeshes:
             bmesh.ops.triangulate(bm, faces=bm.faces)
 
-        print("Generating PdxMeshes...")
+        utils.Log.info("Generating PdxMeshes...")
         material_temp_index = 0
         for bm in bmeshes:
             for vert in bm.verts:
@@ -189,7 +189,7 @@ class PdxFileExporter:
                     if mtex_slot:
                         if hasattr(mtex_slot.texture, 'image'):
                             if mtex_slot.texture.image is None:
-                                print("WARNING ::: Texture Image File not loaded")
+                                utils.Log.warning("Texture Image File not loaded")
                             else:
                                 diff_file = os.path.basename(mtex_slot.texture.image.filepath)
             else:
@@ -206,13 +206,13 @@ class PdxFileExporter:
             material_temp_index += 1
 
 
-        print("Cleaning up BMesh...")
+        utils.Log.info("Cleaning up BMesh...")
         bm_complete.free()
         for bm in bmeshes:
             print(bm)
             bm.free()
 
-        print("Return resulting Meshes...")
+        utils.Log.info("Return resulting Meshes...")
         return result
 
     def export_mesh(self, name, boneIDs=None):
