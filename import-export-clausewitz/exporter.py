@@ -202,9 +202,6 @@ class PdxFileExporter:
             else:
                 diff_file = os.path.basename(mesh.uv_textures[0].data[0].image.filepath)
 
-            
-                utils.Log.debug(vs)
-
             # TODO: Get Skinning information
 
             result_mesh.material.shader = "PdxMeshShip"
