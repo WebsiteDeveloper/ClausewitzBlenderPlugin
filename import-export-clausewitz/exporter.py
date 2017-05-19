@@ -23,10 +23,14 @@ class PdxFileExporter:
         bmeshes = []
         materials = []
         faces_for_materials = {}
+        #vertices_per_group = []
 
-        print(obj)
-        print(obj.data)
         mesh = obj.data
+
+        # for vertex_group in obj.vertex_groups:
+        #     vs = [ v for v in mesh.vertices if vertex_group.index in [ vg.group for vg in v.groups ] ]
+
+        #     vertices_per_group.append(vs)
 
         utils.Log.info("Collecting Materials...")
         for mat_slot in obj.material_slots:
@@ -179,6 +183,9 @@ class PdxFileExporter:
             result_mesh.faces = faces
             result_mesh.meshBounds = pdx_data.PdxBounds(bb_min, bb_max)
             result_mesh.material = pdx_data.PdxMaterial()
+            result_mesh.skin = pdx_data.PdxSkin()
+
+            result_mesh.skin.bonesPerVertice = 4
 
             diff_file = "test_diff"
 
@@ -194,6 +201,9 @@ class PdxFileExporter:
                                 diff_file = os.path.basename(mtex_slot.texture.image.filepath)
             else:
                 diff_file = os.path.basename(mesh.uv_textures[0].data[0].image.filepath)
+
+            
+                utils.Log.debug(vs)
 
             # TODO: Get Skinning information
 
