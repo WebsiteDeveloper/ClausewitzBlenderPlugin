@@ -6,6 +6,7 @@ import math
 import bpy
 import bmesh
 import mathutils
+
 from . import (pdx_data, utils)
 
 class PdxFileExporter:
@@ -174,6 +175,7 @@ class PdxFileExporter:
                     bb_min[j] = min([verts[i][j], bb_min[j]])
                     bb_max[j] = max([verts[i][j], bb_max[j]])
 
+
             result_mesh = pdx_data.PdxMesh()
 
             result_mesh.verts = verts
@@ -183,9 +185,49 @@ class PdxFileExporter:
             result_mesh.faces = faces
             result_mesh.meshBounds = pdx_data.PdxBounds(bb_min, bb_max)
             result_mesh.material = pdx_data.PdxMaterial()
-            result_mesh.skin = pdx_data.PdxSkin()
 
-            result_mesh.skin.bonesPerVertice = 4
+            if boneIDs != None:
+                skin = pdx_data.PdxSkin()
+                
+                tempSkinWeights = {}
+                tempSkinIndices = {}
+                for vGroup in obj.vertex_groups:
+                    if vGroup.name in boneIDs:
+                        for i, v in enumerate(obj.data.vertices):
+                            for g in v.groups:
+                                if g.group == vGroup.index:
+                                    #i index
+                                    w = g.weight
+                                    if not(i in tempSkinWeights):
+                                        tempSkinWeights[i] = []
+                                        tempSkinIndices[i] = []
+                                    tempSkinWeights[i].append(w)
+                                    tempSkinIndices[i].append(boneIDs[vGroup.name])
+
+                bonesPerVertice = 0
+                for i in tempSkinWeights:
+                    bonesPerVertice = max([len(tempSkinWeights[i]), len(tempSkinIndices[i]), bonesPerVertice])
+                print("BPV: " + str(bonesPerVertice))
+
+                if bonesPerVertice > 0:
+                    skinWeights = []
+                    skinIndices = []
+                    for i in tempSkinWeights:
+                        for j in range(bonesPerVertice):
+                            if j < len(tempSkinWeights[i]):
+                                skinWeights.append(tempSkinWeights[i][j])
+                            else:
+                                skinWeights.append(0)
+                            if j < len(tempSkinIndices[i]):
+                                skinIndices.append(tempSkinIndices[i][j])
+                            else:
+                                skinIndices.append(0)
+
+                    skin.bonesPerVertice = bonesPerVertice
+                    skin.indices = skinIndices
+                    skin.weight = skinWeights
+
+                    result_mesh.skin = skin
 
             diff_file = "test_diff"
 

@@ -516,7 +516,7 @@ class PdxSkin():
             result.extend(struct.pack("<I", self.indices[i]))
         result.extend(struct.pack("<cb2s", b'!', 1, b'wf'))
         for i in range(len(self.weight)):
-            result.extend(struct.pack("<I", self.weight[i]))
+            result.extend(struct.pack("<f", self.weight[i]))
 
         return result
 
