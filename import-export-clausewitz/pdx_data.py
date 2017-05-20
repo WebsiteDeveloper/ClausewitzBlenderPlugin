@@ -46,8 +46,6 @@ class PdxFile():
         for i in range(name_length):
             name += buffer.NextChar()
 
-        print(name)
-
         #name = utils.TranslatePropertyName(name) Umbenennen verwirrt nur!
         #print("Property: " + name)
 
@@ -111,7 +109,7 @@ class PdxFile():
             return self.read_object(buffer, depth_temp, prev_obj)
         else:
             object_name = char + utils.ReadNullByteString(buffer)
-            print((" "*depth) + "Object Name: " + object_name)
+            #print((" "*depth) + "Object Name: " + object_name)
 
             if object_name == "object":
                 result = PdxWorld()

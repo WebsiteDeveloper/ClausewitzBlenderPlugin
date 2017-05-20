@@ -77,10 +77,13 @@ class PdxFileExporter:
             temp.faces.index_update()
 
             utils.Log.info("Removing Faces...")
-            for index in faces_for_materials[material]:
-                temp.faces.remove(temp.faces[index - removed_count])
-                temp.faces.ensure_lookup_table()
-                removed_count += 1
+            for removeMaterial in materials:
+                if removeMaterial == material:
+                    continue
+                for index in faces_for_materials[removeMaterial]:
+                    temp.faces.remove(temp.faces[index - removed_count])
+                    temp.faces.ensure_lookup_table()
+                    removed_count += 1
 
             for vert in temp.verts:
                 if len(vert.link_faces) == 0:
@@ -155,7 +158,7 @@ class PdxFileExporter:
                     max_index = i - 1
                     break
 
-            del uv_coords[max_index:(len(uv_coords) - 1)]
+            #del uv_coords[max_index:(len(uv_coords) - 1)]
 
             faces = []
 
