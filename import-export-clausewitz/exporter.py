@@ -44,13 +44,16 @@ class PdxFileExporter:
         utils.Log.info("Getting Faces for Materials...")
         for face in mesh.polygons:
             #print("Face: ", face.index, " Material Index: ", face.material_index)
-            slot = obj.material_slots[face.material_index]
-            mat = slot.material
+            if not(len(obj.material_slots) == 0):
+                slot = obj.material_slots[face.material_index]
+                mat = slot.material
+
 
             if mat is not None:
                 faces_for_materials[mat.name].append(face.index)
             else:
                 utils.Log.notice("No Material for Face: " + str(face.index) + " in Slot: " + str(face.material_index))
+                faces_for_materials["Default"].append(face.index)
 
         #print(faces_for_materials)
 
@@ -91,6 +94,7 @@ class PdxFileExporter:
 
             utils.Log.info("Remove Stray Vertices...")
             for vert in stray_vertices:
+                print("Stray Detected!")
                 temp.verts.remove(vert)
                 temp.verts.ensure_lookup_table()
 
@@ -159,6 +163,11 @@ class PdxFileExporter:
                     break
 
             #del uv_coords[max_index:(len(uv_coords) - 1)]
+
+            print("LenVe: " + str(len(verts)) + " " + str(len(verts) / 3))
+            print("LenNo: " + str(len(normals)) + " " + str(len(normals) / 3))
+            print("LenTa: " + str(len(tangents))+ " " + str(len(tangents) / 4))
+            print("LenUV: " + str(len(uv_coords)) + " " + str(len(uv_coords) / 2))
 
             faces = []
 
