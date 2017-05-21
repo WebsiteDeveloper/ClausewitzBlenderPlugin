@@ -203,18 +203,14 @@ class PdxFileExporter:
                 
                 tempSkinWeights = {}
                 tempSkinIndices = {}
-                for vGroup in obj.vertex_groups:
-                    if vGroup.name in boneIDs:
-                        for i, v in enumerate(obj.data.vertices):
-                            for g in v.groups:
-                                if g.group == vGroup.index:
-                                    #i index
-                                    w = g.weight
-                                    if not(i in tempSkinWeights):
-                                        tempSkinWeights[i] = []
-                                        tempSkinIndices[i] = []
-                                    tempSkinWeights[i].append(w)
-                                    tempSkinIndices[i].append(boneIDs[vGroup.name])
+                for i, v in enumerate(obj.data.vertices):
+                    for g in v.groups:
+                        if obj.vertex_groups[g.group].name in boneIDs:
+                            if not(i in tempSkinWeights):
+                                tempSkinWeights[i] = []
+                                tempSkinIndices[i] = []
+                            tempSkinWeights[i].append(g.weight)
+                            tempSkinIndices[i].append(boneIDs[vGroup.name])
 
                 bonesPerVertice = 0
                 for i in tempSkinWeights:
