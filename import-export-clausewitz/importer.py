@@ -23,7 +23,7 @@ class PdxFileImporter:
 
         for node in self.file.nodes:
             if isinstance(node, pdx_data.PdxAsset):
-                print("Importer: PDXAsset")#TODOs
+                print("Importer: PDXAsset")
                 print("PDXAsset Version " + str(node.version[0]) + "." + str(node.version[1]))
             elif isinstance(node, pdx_data.PdxWorld):
                 for shape in node.objects:
@@ -56,7 +56,7 @@ class PdxFileImporter:
                                 boneNames[joint.index] = joint.name
 
                             bpy.ops.object.mode_set(mode='EDIT')
-                            
+
                             for joint in shape.skeleton.joints:
                                 bone = amt.edit_bones.new(joint.name)
 

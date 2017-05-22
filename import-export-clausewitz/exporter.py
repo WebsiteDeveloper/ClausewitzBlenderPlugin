@@ -24,14 +24,33 @@ class PdxFileExporter:
         bmeshes = []
         materials = []
         faces_for_materials = {}
-        #vertices_per_group = []
+        blender_skin = None
 
         mesh = obj.data
 
-        # for vertex_group in obj.vertex_groups:
-        #     vs = [ v for v in mesh.vertices if vertex_group.index in [ vg.group for vg in v.groups ] ]
+        utils.Log.info("Mapping Skinning Information...")
 
-        #     vertices_per_group.append(vs)
+        if boneIDs != None:
+            #Skin Data Layout:  { VertexIndex: [ {BoneIndex: Weight}, ... ], ... }
+            blender_skin = {}
+
+            for index, vertex in enumerate(obj.data.vertices):
+                skinning_data_for_vertex = []
+
+                for group in vertex.groups:
+                    if obj.vertex_groups[group.group].name in boneIDs:
+                        skinning_data_for_vertex.append({boneIDs[obj.vertex_groups[group.group].name]: group.weight})
+
+                blender_skin[index] = skinning_data_for_vertex
+
+            #utils.Log.debug(blender_skin)
+
+            bones_per_vertex = 4
+            #Bones Per Vertex for now constant 4
+            #for i in blender_skin:
+            #    bones_per_vertex = max(len(blender_skin[i]), bones_per_vertex)
+            #
+            #utils.Log.debug("BPV: " + str(bones_per_vertex))
 
         utils.Log.info("Collecting Materials...")
         for mat_slot in obj.material_slots:
@@ -43,19 +62,15 @@ class PdxFileExporter:
 
         utils.Log.info("Getting Faces for Materials...")
         for face in mesh.polygons:
-            #print("Face: ", face.index, " Material Index: ", face.material_index)
-            if not(len(obj.material_slots) == 0):
+            if len(obj.material_slots) != 0:
                 slot = obj.material_slots[face.material_index]
                 mat = slot.material
-
 
             if mat is not None:
                 faces_for_materials[mat.name].append(face.index)
             else:
                 utils.Log.notice("No Material for Face: " + str(face.index) + " in Slot: " + str(face.material_index))
                 faces_for_materials["Default"].append(face.index)
-
-        #print(faces_for_materials)
 
         bm_complete = bmesh.new()
         bm_complete.from_mesh(mesh)
@@ -73,6 +88,7 @@ class PdxFileExporter:
             temp = bm_complete.copy()
 
             stray_vertices = []
+            stray_vertices_indices = []
 
             temp.faces.ensure_lookup_table()
             temp.verts.ensure_lookup_table()
@@ -80,6 +96,7 @@ class PdxFileExporter:
             temp.faces.index_update()
 
             utils.Log.info("Removing Faces...")
+            #TODO: Lookup Code
             for removeMaterial in materials:
                 if removeMaterial == material:
                     continue
@@ -91,16 +108,43 @@ class PdxFileExporter:
             for vert in temp.verts:
                 if len(vert.link_faces) == 0:
                     stray_vertices.append(vert)
+                    stray_vertices_indices.append(vert.index)
+
+            if bones_per_vertex > 0 and blender_skin is not None:
+                skin = pdx_data.PdxSkin()
+                indices = []
+                weights = []
+
+                for index, data in blender_skin.items():
+                    if index not in stray_vertices_indices:
+                        temp_indices = [-1] * bones_per_vertex
+                        temp_weights = [0] * bones_per_vertex
+
+                        for i in range(0, len(data)):
+                            temp_indices[i] = next (iter (data[i].keys()))
+                            temp_weights[i] = data[i][temp_indices[i]]
+
+                        indices.extend(temp_indices)
+                        weights.extend(temp_weights)
+
+                skin.bonesPerVertice = bones_per_vertex
+                skin.indices = indices
+                skin.weight = weights
+
+                utils.Log.debug(len(skin.indices))
+                utils.Log.debug(len(skin.weight))
 
             utils.Log.info("Remove Stray Vertices...")
             for vert in stray_vertices:
-                print("Stray Detected!")
+                #print("Stray Detected!")
                 temp.verts.remove(vert)
                 temp.verts.ensure_lookup_table()
 
             bmeshes.append(temp)
 
-        # TODO: Split mesh if it has more than 35000 verts (maybe check for actual Clausewitz-Engine limitation)
+        #TODO: Split mesh if it has more than 35000 verts (maybe check for actual Clausewitz-Engine limitation)
+
+        #TODO: How do we want to Triangulate Skin Data?
         utils.Log.info("Triangulating Meshes...")
         for bm in bmeshes:
             bmesh.ops.triangulate(bm, faces=bm.faces)
@@ -198,45 +242,6 @@ class PdxFileExporter:
             result_mesh.meshBounds = pdx_data.PdxBounds(bb_min, bb_max)
             result_mesh.material = pdx_data.PdxMaterial()
 
-            if boneIDs != None:
-                skin = pdx_data.PdxSkin()
-                
-                tempSkinWeights = {}
-                tempSkinIndices = {}
-                for i, v in enumerate(obj.data.vertices):
-                    for g in v.groups:
-                        if obj.vertex_groups[g.group].name in boneIDs:
-                            if not(i in tempSkinWeights):
-                                tempSkinWeights[i] = []
-                                tempSkinIndices[i] = []
-                            tempSkinWeights[i].append(g.weight)
-                            tempSkinIndices[i].append(boneIDs[vGroup.name])
-
-                bonesPerVertice = 0
-                for i in tempSkinWeights:
-                    bonesPerVertice = max([len(tempSkinWeights[i]), len(tempSkinIndices[i]), bonesPerVertice])
-                print("BPV: " + str(bonesPerVertice))
-
-                if bonesPerVertice > 0:
-                    skinWeights = []
-                    skinIndices = []
-                    for i in tempSkinWeights:
-                        for j in range(bonesPerVertice):
-                            if j < len(tempSkinWeights[i]):
-                                skinWeights.append(tempSkinWeights[i][j])
-                            else:
-                                skinWeights.append(0)
-                            if j < len(tempSkinIndices[i]):
-                                skinIndices.append(tempSkinIndices[i][j])
-                            else:
-                                skinIndices.append(0)
-
-                    skin.bonesPerVertice = bonesPerVertice
-                    skin.indices = skinIndices
-                    skin.weight = skinWeights
-
-                    result_mesh.skin = skin
-
             diff_file = "test_diff"
 
             if len(obj.material_slots) > 0:
@@ -251,8 +256,6 @@ class PdxFileExporter:
                                 diff_file = os.path.basename(mtex_slot.texture.image.filepath)
             else:
                 diff_file = os.path.basename(mesh.uv_textures[0].data[0].image.filepath)
-
-            # TODO: Get Skinning information
 
             result_mesh.material.shader = "PdxMeshShip"
             result_mesh.material.diff = diff_file
