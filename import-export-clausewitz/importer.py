@@ -72,7 +72,7 @@ class PdxFileImporter:
                                     print("Joint: " + joint.name)
                                     parent = amt.edit_bones[boneNames[joint.parent]] 
                                     bone.parent = parent
-                                    bone.use_connect = True 
+                                    bone.head = parent.tail
                                 else:          
                                     bone.head = (0,0,0)
 
