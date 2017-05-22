@@ -83,7 +83,9 @@ class PdxFileImporter:
                                 mat_temp.resize_4x4()
 
                                 bone.tail = -components[0] * mat_temp * mat_rot
-                                print(str(bone.tail))
+
+                                if (bone.head - bone.tail).length < 0.001:
+                                    bone.tail = bone.tail + mathutils.Vector((0, 0, 0.001))
 
                             bpy.ops.object.mode_set(mode='OBJECT')
 
@@ -212,3 +214,78 @@ class PdxFileImporter:
                     #constraint.target = parentBoneName
             else:
                 print("ERROR ::: Invalid node found: " + str(node))
+
+    def import_anim(self):
+        eul = mathutils.Euler((0.0, 0.0, math.radians(180.0)), 'XYZ')
+        eul2 = mathutils.Euler((math.radians(90.0), 0.0, 0.0), 'XYZ')
+        mat_rot = eul.to_matrix() * eul2.to_matrix()
+        mat_rot.resize_4x4()
+        scn = bpy.context.scene
+
+        tJoints = []
+        qJoints = []
+        sJoints = []
+        samples = None
+
+        armature = None
+
+        for obj in bpy.data.objects:
+            if obj.type == "ARMATURE":
+                if obj.parent is None:
+                    armature = obj
+                    break
+
+        for node in self.file.nodes:
+            if isinstance(node, pdx_data.PdxAsset):
+                print("Importer: PDXAsset")#TODOs
+                print("PDXAsset Version " + str(node.version[0]) + "." + str(node.version[1]))
+            elif isinstance(node, pdx_data.PdxAnimInfo):
+                print("Loading AnimInfo...")
+                print("FPS: " + str(node.fps))
+                scn.render.fps = node.fps
+                print("Samples: " + str(node.samples))
+                scn.frame_start = 1
+                scn.frame_end = node.samples
+                print("Joints: " + str(node.jointCount))
+
+                for joint in node.animJoints:
+                    print("Mode: " + joint.sampleMode)
+                    if "t" in joint.sampleMode:
+                        print("T")
+                        tJoints.append(joint)
+                    if "q" in joint.sampleMode:
+                        print("Q")
+                        qJoints.append(joint)
+                    if "s" in joint.sampleMode:
+                        print("S")
+                        sJoints.append(joint)
+
+            elif isinstance(node, pdx_data.PdxAnimSamples):
+                samples = node
+
+        if (len(tJoints) > 0 or len(qJoints) > 0 or len(sJoints) > 0) and samples != None:
+            print("Animation detected!")
+            print("T: " + str(len(tJoints)) + "|" + str(len(samples.t) / (scn.frame_end * 3)))
+            print("Q: " + str(len(qJoints)) + "|" + str(len(samples.q) / (scn.frame_end * 4)))
+            print("S: " + str(len(sJoints)) + "|" + str(len(samples.s) / (scn.frame_end * 1)))
+
+            bpy.context.scene.objects.active = armature
+            bpy.ops.object.mode_set(mode='POSE')
+
+            for i in range(len(qJoints)):
+                qJoint = qJoints[i]
+                bone = armature.pose.bones[qJoint.name]
+                for f in range(scn.frame_end):
+                    vec = (samples.q[(f * len(qJoints) + i) * 4 + 0], samples.q[(f * len(qJoints) + i) * 4 + 1], samples.q[(f * len(qJoints) + i) * 4 + 2], samples.q[(f * len(qJoints) + i) * 4 + 3])
+                    q = (vec[1], vec[2], vec[0], vec[3])
+
+                    if qJoint.name == "tail_1":
+                        print(str(q))
+
+                    bone.rotation_mode = 'QUATERNION'
+                    bone.rotation_quaternion = q
+                    bone.keyframe_insert(data_path="rotation_quaternion" ,frame=f+1)
+
+            bpy.ops.object.mode_set(mode='OBJECT')
+        else:
+            print("Invalid File (Joints or Samples missing)")

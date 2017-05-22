@@ -272,7 +272,7 @@ class PdxFileExporter:
         utils.Log.info("Return resulting Meshes...")
         return result
 
-    def export_mesh(self, name, boneIDs=None):
+    def export_mesh(self, name):
         eul = mathutils.Euler((0.0, 0.0, math.radians(180.0)), 'XYZ')
         eul2 = mathutils.Euler((math.radians(90.0), 0.0, 0.0), 'XYZ')
         mat_rot = eul.to_matrix() * eul2.to_matrix()

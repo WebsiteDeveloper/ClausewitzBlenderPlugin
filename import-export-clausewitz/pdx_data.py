@@ -47,7 +47,7 @@ class PdxFile():
             name += buffer.NextChar()
 
         #name = utils.TranslatePropertyName(name) Umbenennen verwirrt nur!
-        #print("Property: " + name)
+        print("Property: " + name)
 
         char = buffer.NextChar()
 
@@ -109,7 +109,7 @@ class PdxFile():
             return self.read_object(buffer, depth_temp, prev_obj)
         else:
             object_name = char + utils.ReadNullByteString(buffer)
-            #print((" "*depth) + "Object Name: " + object_name)
+            print((" "*depth) + "Object Name: " + object_name)
 
             if object_name == "object":
                 result = PdxWorld()
@@ -119,6 +119,8 @@ class PdxFile():
                 result = PdxSkeleton()
             elif object_name == "locator":
                 result = PdxLocators()
+            elif object_name == "info":
+                result = PdxAnimInfo()
             else:
                 result = PdxObject(object_name, [], depth)
 
@@ -135,9 +137,20 @@ class PdxFile():
                     else:
                         break
 
+            print("Test4")
+            print(object_name)
+
             if object_name == "object":
                 result = PdxWorld()
-                result.objects = sub_objects
+
+                for o in sub_objects:
+                    if isinstance(o, PdxShape):
+                        result.objects.append(o)
+                    else:
+                        print("ERROR ::: World contains invalid Sub-Object: " + str(type(o)))
+
+                for p in object_properties:
+                    print("ERROR ::: Invalid Property in World: \"" + p.name + "\"")
             elif object_name == "mesh":
                 result = PdxMesh()
 
@@ -170,12 +183,23 @@ class PdxFile():
                     else:
                         print("ERROR ::: Invalid Property in Mesh: \"" + p.name + "\"")
             elif object_name == "aabb":
-                result = PdxBounds(object_properties[0].value, object_properties[1].value)
+                result = PdxBounds(None, None)
+
+                for o in sub_objects:
+                    print("ERROR ::: Bounds contains invalid Sub-Object: " + str(type(o)))
+
+                for p in object_properties:
+                    if(p.name == "min"):
+                        result.min = p.value
+                    elif(p.name == "max"):
+                        result.max = p.value
+                    else:
+                        print("ERROR ::: Invalid Property in Bounds: \"" + p.name + "\"")
             elif object_name == "skin":
                 result = PdxSkin()
 
-                if len(sub_objects) > 0:
-                    print("ERROR ::: " + str(len(sub_objects)) + " Sub Objects Found! (Skin)")
+                for o in sub_objects:
+                    print("ERROR ::: Skin contains invalid Sub-Object: " + str(type(o)))
 
                 for p in object_properties:
                     if p.name == "bones":
@@ -195,8 +219,8 @@ class PdxFile():
             elif object_name == "material":
                 result = PdxMaterial()
 
-                if len(sub_objects) > 0:
-                    print("ERROR ::: " + str(len(sub_objects)) + " Sub Objects Found! (Material)")
+                for o in sub_objects:
+                    print("ERROR ::: Material contains invalid Sub-Object: " + str(type(o)))
 
                 for p in object_properties:
                     if p.name == "shader":
@@ -208,20 +232,74 @@ class PdxFile():
                     elif p.name == "spec":
                         result.spec = p.value
                     else:
-                        print("ERROR ::: Invalid Property in Skin: \"" + p.name + "\"")
+                        print("ERROR ::: Invalid Property in Material: \"" + p.name + "\"")
             elif object_name == "skeleton":
                 result = PdxSkeleton()
 
-                #Needs Error Checkings
-                result.joints = sub_objects
+                for o in sub_objects:
+                    if isinstance(o, PdxJoint):
+                        result.joints.append(o)
+                    else:
+                        print("ERROR ::: Skeleton contains invalid Sub-Object: " + str(type(o)))
 
-                if len(object_properties) > 0:
-                    print("ERROR ::: " + str(len(object_properties)) + " Object Parameters Found! (Skeleton)")
+                for p in object_properties:
+                    print("ERROR ::: Invalid Property in Skeleton: \"" + p.name + "\"")
             elif object_name == "locator":
                 result = PdxLocators()
-                result.locators = sub_objects
+
+                for o in sub_objects:
+                    if isinstance(o, PdxLocator):
+                        result.locators.append(o)
+                    else:
+                        print("ERROR ::: Locators contains invalid Sub-Object: " + str(type(o)))
+
+                for p in object_properties:
+                    print("ERROR ::: Invalid Property in Locators: \"" + p.name + "\"")
+            elif object_name == "info":
+                result = PdxAnimInfo()
+
+                for o in sub_objects:
+                    if isinstance(o, PdxAnimJoint):
+                        result.animJoints.append(o)
+                    else:
+                        print("ERROR ::: AnimInfo contains invalid Sub-Object: " + str(type(o)))
+
+                for p in object_properties:
+                    if p.name == "fps":
+                        if len(p.value) == 1:
+                            result.fps = p.value[0]
+                        else:
+                            print("ERROR ::: fps has more than 1 Value")
+                    elif p.name == "sa":
+                        if len(p.value) == 1:
+                            result.samples = p.value[0]
+                        else:
+                            print("ERROR ::: samples has more than 1 Value")
+                    elif p.name == "j":
+                        if len(p.value) == 1:
+                            result.jointCount = p.value[0]
+                        else:
+                            print("ERROR ::: joints has more than 1 Value")
+                    else:
+                        print("ERROR ::: Invalid Property in AnimInfo: \"" + p.name + "\"")
+            elif object_name == "samples":
+                result = PdxAnimSamples()
+
+                for o in sub_objects:
+                    print("ERROR ::: AnimSamples contains invalid Sub-Object: " + str(type(o)))
+
+                for p in object_properties:
+                    if p.name == "t":
+                        result.t = p.value
+                    elif p.name == "q":
+                        result.q = p.value
+                    elif p.name == "s":
+                        result.s = p.value
+                    else:
+                        print("ERROR ::: Invalid Property in AnimSamples: \"" + p.name + "\"")
             else:
                 if isinstance(prev_obj, PdxLocators):
+                    print("Prev: Locator")
                     result = PdxLocator(object_name, object_properties[0].value)
 
                     if len(object_properties) > 1:
@@ -262,6 +340,33 @@ class PdxFile():
                             else:
                                 print("ERROR ::: Joint Transform not 12 Values")
 
+                elif isinstance(prev_obj, PdxAnimInfo):
+                    result = PdxAnimJoint(object_name)
+
+                    for o in sub_objects:
+                        print("ERROR ::: AnimJoint \"" + object_name + "\" contains invalid Sub-Object: " + str(type(o)))
+
+
+                    for p in object_properties:
+                        if p.name == "sa":
+                            result.sampleMode = p.value
+                        elif p.name == "t":
+                            if len(p.value) == 3:
+                                result.translation = p.value
+                            else:
+                                print("ERROR ::: AnimJoint Translation has a length of " + str(len(p.value)))
+                        elif p.name == "q":
+                            if len(p.value) == 4:
+                                result.translation = p.value
+                            else:
+                                print("ERROR ::: AnimJoint Quaternion has a length of " + str(len(p.value)))
+                        elif p.name == "s":
+                            if len(p.value) == 1:
+                                result.size = p.value[0]
+                            else:
+                                print("ERROR ::: AnimJoint Size has a length of " + str(len(p.value)))
+                        else:
+                            print("ERROR ::: Invalid Property in AnimJoint: \"" + p.name + "\"")
                 else:
                     result = PdxObject(object_name, object_properties, depth)
 
@@ -573,8 +678,8 @@ class PdxAnimInfo():
         result.extend(struct.pack("<5sb", b'[info', 0))
 
         result.extend(struct.pack("<cb4sif", b'!', 3, b'fpsf', 1, self.fps))
-        result.extend(struct.pack("<cb3siI", b'!', 3, b'sai', 1, self.samples))
-        result.extend(struct.pack("<cb2siI", b'!', 3, b'ji', 1, self.jointCount))
+        result.extend(struct.pack("<cb3siI", b'!', 2, b'sai', 1, self.samples))
+        result.extend(struct.pack("<cb2siI", b'!', 1, b'ji', 1, self.jointCount))
 
         for animJoint in self.animJoints:
             result.extend(animJoint.get_binary_data())
@@ -595,12 +700,12 @@ class PdxAnimJoint():
         result.extend(struct.pack("<2s", b'[['))
         result.extend(struct.pack("<" + str(len(self.name)) + "sb", self.name.encode('UTF-8'), 0))
 
-        result.extend(struct.pack("<cb3s", b'!', 6, b'sas'))
+        result.extend(struct.pack("<cb3s", b'!', 2, b'sas'))
         result.extend(struct.pack("<II", 1, len(self.sampleMode) + 1))
         result.extend(struct.pack("<" + str(len(self.sampleMode)) + "sb", self.sampleMode.encode("UTF-8"), 0))
 
         if len(self.translation) == 3:
-            result.extend(struct.pack("<cb2sI", b'!', 2, b'tf', 3))
+            result.extend(struct.pack("<cb2sI", b'!', 1, b'tf', 3))
 
             for t in self.translation:
                 result.extend(struct.pack("<f", t))
@@ -608,17 +713,53 @@ class PdxAnimJoint():
             print("ERROR ::: AnimJoint Translation has invalid size")
 
         if len(self.quaternion) == 4:
-            result.extend(struct.pack("<cb2sI", b'!', 2, b'qf', 4))
+            result.extend(struct.pack("<cb2sI", b'!', 1, b'qf', 4))
 
             for q in self.quaternion:
                 result.extend(struct.pack("<f", q))
         else:
             print("ERROR ::: AnimJoint Quaternion has invalid size")
 
-        result.extend(struct.pack("<cb2sII", b'!', 3, b'si', 1, self.jointCount))
+        result.extend(struct.pack("<cb2sII", b'!', 1, b'si', 1, self.size))
 
         return result
 
+class PdxAnimSamples:
+    def __init__(self):
+        self.t = []
+        self.q = []
+        self.s = []
+
+    def get_binary_data(self):
+        result = bytearray()
+
+        result.extend(struct.pack("<5sb", b'[samples', 0))
+
+        if len(self.t) % 3 == 0:
+            result.extend(struct.pack("<cb2sI", b'!', 1, b'tf', len(self.t)))
+
+            for t in self.t:
+                result.extend(struct.pack("<f", t))
+        else:
+            print("ERROR ::: T-Samples are not multiples of 3")
+
+        if len(self.q) % 4 == 0:
+            result.extend(struct.pack("<cb2sI", b'!', 1, b'tf', len(self.q)))
+
+            for q in self.q:
+                result.extend(struct.pack("<f", q))
+        else:
+            print("ERROR ::: Q-Samples are not multiples of 4")
+
+        if len(self.s) % 1 == 0:
+            result.extend(struct.pack("<cb2sI", b'!', 1, b'tf', len(self.s)))
+
+            for s in self.s:
+                result.extend(struct.pack("<f", s))
+        else:
+            print("ERROR ::: S-Samples are not multiples of 1")
+
+        return result
 
 # Temporary objects
 class PdxObject():
