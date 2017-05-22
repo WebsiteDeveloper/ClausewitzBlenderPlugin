@@ -276,12 +276,9 @@ class PdxFileExporter:
         return result
 
     def export_mesh(self, name):
-        eul = mathutils.Euler((0.0, 0.0, math.radians(180.0)), 'XYZ')
-        eul2 = mathutils.Euler((math.radians(90.0), 0.0, 0.0), 'XYZ')
-        mat_rot = eul.to_matrix() * eul2.to_matrix()
-        mat_rot.invert_safe()
-
-        transform_mat = bpy.data.objects[name].matrix_world * mat_rot.to_4x4()
+        #Rotation Matrix to Transform from Y-Up Space to Z-Up Space
+        mat_rot = mathutils.Matrix.Rotation(math.radians(90.0), 4, 'X')
+        transform_mat = bpy.data.objects[name].matrix_world * mat_rot
 
         pdxObjects = []
         pdxObjects.append(pdx_data.PdxAsset())
