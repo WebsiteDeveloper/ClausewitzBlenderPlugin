@@ -62,15 +62,17 @@ class PdxFileExporter:
 
         utils.Log.info("Getting Faces for Materials...")
         for face in mesh.polygons:
+            mat = None
+
             if len(obj.material_slots) != 0:
                 slot = obj.material_slots[face.material_index]
                 mat = slot.material
 
-                if mat is not None:
-                    faces_for_materials[mat.name].append(face.index)
-                else:
-                    utils.Log.notice("No Material for Face: " + str(face.index) + " in Slot: " + str(face.material_index))
-                    faces_for_materials["Default"].append(face.index)
+            if mat is not None:
+                faces_for_materials[mat.name].append(face.index)
+            else:
+                utils.Log.notice("No Material for Face: " + str(face.index) + " in Slot: " + str(face.material_index))
+                faces_for_materials["Default"].append(face.index)
 
         bm_complete = bmesh.new()
         bm_complete.from_mesh(mesh)
@@ -300,17 +302,11 @@ class PdxFileExporter:
                             if child.parent == obj:
                                 pdxSkeleton = pdx_data.PdxSkeleton()
 
-                                rootJoint = pdx_data.PdxJoint("root")
-                                rootJoint.index = 0
-                                rootJoint.transform = [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0]
-
-                                pdxSkeleton.joints.append(rootJoint)
-
                                 boneIDs = {}
 
                                 for i in range(len(obj.data.bones)):
                                     bone = obj.data.bones[i]
-                                    boneIDs[bone.name] = i + 1
+                                    boneIDs[bone.name] = i
 
                                 for i in range(len(obj.data.bones)):
                                     bone = obj.data.bones[i]
@@ -324,7 +320,6 @@ class PdxFileExporter:
                                         pdxJoint.parent = boneIDs[bone.parent.name]
                                     else:
                                         print("Root Bone")
-                                        pdxJoint.parent = rootJoint.index
 
                                     pdxJoint.transform = [1, 0, 0, 0, 1, 0, 0, 0, 1, bone.tail[0], bone.tail[1], bone.tail[2]]
 

@@ -47,13 +47,13 @@ class PdxFile():
             name += buffer.NextChar()
 
         #name = utils.TranslatePropertyName(name) Umbenennen verwirrt nur!
-        print("Property: " + name)
+        #print("Property: " + name)
 
         char = buffer.NextChar()
 
         if char == "i":
             data_count = buffer.NextUInt32()
-            print("Count: ")
+            #print("Count: ")
             for i in range(data_count):
                 temp = buffer.NextInt32()
                 property_data.append(temp)
@@ -136,9 +136,6 @@ class PdxFile():
                         sub_objects.append(self.read_object(buffer, 0, result))
                     else:
                         break
-
-            print("Test4")
-            print(object_name)
 
             if object_name == "object":
                 result = PdxWorld()
@@ -340,13 +337,13 @@ class PdxFile():
                     for p in object_properties:
                         if p.name == "ix":
                             if len(p.value) == 1:
-                                print("Joint Index: " + str(p.value[0]))
+                                #print("Joint Index: " + str(p.value[0]))
                                 result.index = p.value[0]
                             else:
                                 print("ERROR ::: Joint Index has more than 1 Value")
                         elif p.name == "pa":
                             if len(p.value) == 1:
-                                print("Parent Index: " + str(p.value[0]))
+                                #print("Parent Index: " + str(p.value[0]))
                                 result.parent = p.value[0]
                             else:
                                 print("ERROR ::: Parent Index has more than 1 Value")
@@ -403,7 +400,6 @@ class PdxAsset():
         result.extend(struct.pack("<cb", b'i', 2))
         result.extend(struct.pack(">iibbb", 1, 0, 0, 0, 0))
 
-        print(result)
         return result
 
 class PdxWorld():
