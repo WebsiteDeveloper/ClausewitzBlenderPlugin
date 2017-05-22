@@ -299,28 +299,44 @@ class PdxFile():
                         print("ERROR ::: Invalid Property in AnimSamples: \"" + p.name + "\"")
             else:
                 if isinstance(prev_obj, PdxLocators):
-                    print("Prev: Locator")
-                    result = PdxLocator(object_name, object_properties[0].value)
+                    result = PdxLocator(object_name, None)
+                    for o in sub_objects:
+                        print("ERROR ::: Locator \"" + object_name + "\" contains invalid Sub-Object: " + str(type(o)))
 
-                    if len(object_properties) > 1:
-                        result.quaternion = object_properties[1].value
-
-                    if len(object_properties) > 2:
-                        result.parent = object_properties[2].value
-
+                    for p in object_properties:
+                        if p.name == "p":
+                            if len(p.value) == 3:
+                                result.pos = p.value
+                            else:
+                                print("ERROR ::: Locator Position does not have 3 Values")
+                        elif p.name == "q":
+                            if len(p.value) == 4:
+                                result.quaternion = p.value
+                            else:
+                                print("ERROR ::: Locator Quaternion does not have 4 Values")
+                        elif p.name == "pa":
+                            result.parent = p.value
+                        else:
+                            print("ERROR ::: Invalid Property in Locator: \"" + p.name + "\"")
                 elif isinstance(prev_obj, PdxWorld):
                     result = PdxShape(object_name)
-                    meshes = []
 
                     for o in sub_objects:
                         if isinstance(o, PdxSkeleton):
                             result.skeleton = o
                         elif isinstance(o, PdxMesh):
-                            meshes.append(o)
+                            result.meshes.append(o)
+                        else:
+                            print("ERROR ::: Shape \"" + object_name + "\" contains invalid Sub-Object: " + str(type(o)))
 
-                    result.meshes = meshes
+                    for p in object_properties:
+                        print("ERROR ::: Invalid Property in Shape: \"" + p.name + "\"")
                 elif isinstance(prev_obj, PdxSkeleton):
                     result = PdxJoint(object_name)
+
+                    for o in sub_objects:
+                        print("ERROR ::: Joint \"" + object_name + "\" contains invalid Sub-Object: " + str(type(o)))
+
                     for p in object_properties:
                         if p.name == "ix":
                             if len(p.value) == 1:
@@ -339,13 +355,13 @@ class PdxFile():
                                 result.transform = p.value
                             else:
                                 print("ERROR ::: Joint Transform not 12 Values")
-
+                        else:
+                            print("ERROR ::: Invalid Property in Joint: \"" + p.name + "\"")
                 elif isinstance(prev_obj, PdxAnimInfo):
                     result = PdxAnimJoint(object_name)
 
                     for o in sub_objects:
                         print("ERROR ::: AnimJoint \"" + object_name + "\" contains invalid Sub-Object: " + str(type(o)))
-
 
                     for p in object_properties:
                         if p.name == "sa":
@@ -357,7 +373,7 @@ class PdxFile():
                                 print("ERROR ::: AnimJoint Translation has a length of " + str(len(p.value)))
                         elif p.name == "q":
                             if len(p.value) == 4:
-                                result.translation = p.value
+                                result.quaternion = p.value
                             else:
                                 print("ERROR ::: AnimJoint Quaternion has a length of " + str(len(p.value)))
                         elif p.name == "s":
