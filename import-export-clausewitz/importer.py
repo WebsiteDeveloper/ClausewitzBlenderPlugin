@@ -115,11 +115,11 @@ class PdxFileImporter:
                                     for name in boneNames:
                                         sub_object.vertex_groups.new(name)
 
-                                    print("BPV: " + str(meshData.skin.bonesPerVertice))
-                                    bpv = meshData.skin.bonesPerVertice
-                                    bpv = 4
-
                                     if meshData.skin is not None:
+                                        print("BPV: " + str(meshData.skin.bonesPerVertice))
+                                        bpv = meshData.skin.bonesPerVertice
+                                        bpv = 4
+
                                         for i in range(len(meshData.skin.indices) // bpv):
                                             for j in range(bpv):
                                                 indice = meshData.skin.indices[i * bpv + j]
