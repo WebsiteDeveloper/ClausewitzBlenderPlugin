@@ -115,13 +115,17 @@ class PdxFileImporter:
                                     for name in boneNames:
                                         sub_object.vertex_groups.new(name)
 
+                                    print("BPV: " + str(meshData.skin.bonesPerVertice))
+                                    bpv = meshData.skin.bonesPerVertice
+                                    bpv = 4
+
                                     if meshData.skin is not None:
-                                        for i in range(len(meshData.skin.indices) // meshData.skin.bonesPerVertice):
-                                            for j in range(meshData.skin.bonesPerVertice):
-                                                indice = meshData.skin.indices[i * meshData.skin.bonesPerVertice + j]
+                                        for i in range(len(meshData.skin.indices) // bpv):
+                                            for j in range(bpv):
+                                                indice = meshData.skin.indices[i * bpv + j]
                                                 if indice >= 0:
                                                     bName = boneNames[indice]
-                                                    weight = meshData.skin.weight[i * meshData.skin.bonesPerVertice + j]
+                                                    weight = meshData.skin.weight[i * bpv + j]
                                                     sub_object.vertex_groups[bName].add([i], weight, 'REPLACE')
                                     else:
                                         utils.Log.warning("No Skinning Data")
@@ -276,8 +280,8 @@ class PdxFileImporter:
                 qJoint = qJoints[i]
                 bone = armature.pose.bones[qJoint.name]
                 for f in range(scn.frame_end):
-                    vec = (samples.q[(f * len(qJoints) + i) * 4 + 0], samples.q[(f * len(qJoints) + i) * 4 + 1], samples.q[(f * len(qJoints) + i) * 4 + 2], samples.q[(f * len(qJoints) + i) * 4 + 3])
-                    q = (vec[1], vec[2], vec[0], vec[3])
+                    vec = mathutils.Vector((samples.q[(f * len(qJoints) + i) * 4 + 0], samples.q[(f * len(qJoints) + i) * 4 + 1], samples.q[(f * len(qJoints) + i) * 4 + 2], samples.q[(f * len(qJoints) + i) * 4 + 3]))
+                    q = vec - mathutils.Vector(qJoint.quaternion)
 
                     if qJoint.name == "tail_1":
                         print(str(q))
@@ -285,6 +289,16 @@ class PdxFileImporter:
                     bone.rotation_mode = 'QUATERNION'
                     bone.rotation_quaternion = q
                     bone.keyframe_insert(data_path="rotation_quaternion" ,frame=f+1)
+
+            for i in range(len(tJoints)):
+                tJoint = tJoints[i]
+                bone = armature.pose.bones[tJoint.name]
+                for f in range(scn.frame_end):
+                    vec = mathutils.Vector((samples.t[(f * len(tJoints) + i) * 3 + 0], samples.t[(f * len(tJoints) + i) * 3 + 1], samples.t[(f * len(tJoints) + i) * 3 + 2]))
+                    t = (vec - mathutils.Vector(tJoint.translation))
+
+                    bone.location = t
+                    bone.keyframe_insert(data_path="location" ,frame=f+1)
 
             bpy.ops.object.mode_set(mode='OBJECT')
         else:
