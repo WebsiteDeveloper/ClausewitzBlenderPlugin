@@ -194,17 +194,15 @@ class PdxFileExporter:
             bm.verts.index_update()
             bm.faces.index_update()
 
-            uv_coords = []
+            uv_coords = {}
             uv_layer = bm.loops.layers.uv.active
-
-            for face in bm.faces:
-                for loop in face.loops:
-                    uv_coords.append((0, 0))
 
             for face in bm.faces:
                 for loop in face.loops:
                     uv_coords[loop.vert.index] = loop[uv_layer].uv.copy()
                     uv_coords[loop.vert.index][1] = 1 - uv_coords[loop.vert.index][1]
+
+            print(len(uv_coords))
 
             max_index = 0
 
@@ -227,10 +225,10 @@ class PdxFileExporter:
 
             #del uv_coords[max_index:(len(uv_coords) - 1)]
 
-            print("LenVe: " + str(len(verts)) + " " + str(len(verts) / 3))
-            print("LenNo: " + str(len(normals)) + " " + str(len(normals) / 3))
-            print("LenTa: " + str(len(tangents))+ " " + str(len(tangents) / 4))
-            print("LenUV: " + str(len(uv_coords)) + " " + str(len(uv_coords) / 2))
+            print("LenVe: " + str(len(verts)))
+            print("LenNo: " + str(len(normals)))
+            print("LenTa: " + str(len(tangents)))
+            print("LenUV: " + str(len(uv_coords)))
 
             faces = []
 
@@ -292,7 +290,6 @@ class PdxFileExporter:
     def export_mesh(self, name):
         #Rotation Matrix to Transform from Y-Up Space to Z-Up Space
         mat_rot = mathutils.Matrix.Rotation(math.radians(90.0), 4, 'X')
-        transform_mat = bpy.data.objects[name].matrix_world * mat_rot
 
         pdxObjects = []
         pdxObjects.append(pdx_data.PdxAsset())
@@ -301,8 +298,10 @@ class PdxFileExporter:
         pdxWorld = pdx_data.PdxWorld()
 
         for obj in bpy.data.objects:
+            transform_mat = obj.matrix_world * mat_rot
             if obj.select:
                 if obj.type == "MESH":
+                    print("Found Mesh: " + obj.name)
                     if obj.parent is None:
                         pdxShape = pdx_data.PdxShape(obj.name)
                         pdxShape.meshes = self.splitMeshes(obj, transform_mat)
@@ -361,8 +360,6 @@ class PdxFileExporter:
         result_file = io.open(self.filename, 'w+b')
 
         result_file.write(b'@@b@')
-        
-        print(pdxObjects)
 
         for i in range(len(pdxObjects)):
             result_file.write(pdxObjects[i].get_binary_data())
