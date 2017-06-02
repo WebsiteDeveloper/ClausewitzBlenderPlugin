@@ -7,6 +7,8 @@ import bpy
 import bmesh
 import mathutils
 
+import time
+
 from . import (pdx_data, utils)
 
 class PdxFileExporter:
@@ -127,6 +129,76 @@ class PdxFileExporter:
 
         return {'mesh': temp, 'skin': skin, 'material': selected_material}
 
+    def handle_BMesh_Face(self, face, verts, faces, normals, tangents, uv_coords, transform_mat, uv_active):
+        indices = []
+        usedVertices = [] #For Speed
+        print("\nExporting Face: " + str(len(faces)))
+
+        for v in face.verts:
+            vert = v.co * transform_mat
+            #print("VC: " + str(v.co))
+
+            #TODO Auto Edge Split on sharp Edges (For now in workflow before Export)
+            if face.smooth:
+                #print("VN: " + str(v.normal))
+                normal = v.normal * transform_mat
+            else:
+                #print("FN: " + str(v.normal))
+                normal = face.normal * transform_mat
+            normal.normalize()
+
+            for i in range(3):
+                vert[i] = round(vert[i], 6)
+                normal[i] = round(normal[i], 6)
+
+            if len(v.link_faces) > 0:#For Models with stray vertices...
+                tangent = v.link_faces[0].calc_tangent_vert_diagonal().to_4d() * transform_mat
+            else:
+                #This should also remove stray vertices from event getting exported!
+                #Wait they are not even found because im only exporting faces! Awesome!
+                utils.Log.info("Critical Error: Face has an Vertex without faces!")
+                continue
+
+            for loop in v.link_loops:
+                if loop.face != face:
+                    continue
+
+                uv = loop[uv_active].uv.copy()
+                uv[1] = 1 - uv[1]
+
+                if vert in verts and normal in normals and tangent in tangents and uv in uv_coords:
+                    #Vertice probably already exists... Need to find the index
+                    #Continue when sucessfully set the index
+                        
+                    vExists = False
+                    vIndices = [i for i, v in enumerate(verts) if v == vert]
+                    nIndices = [i for i, v in enumerate(normals) if v == normal]
+                    tIndices = [i for i, v in enumerate(tangents) if v == tangent]
+                    uIndices = [i for i, v in enumerate(uv_coords) if v == uv]
+
+                    for iV in vIndices:
+                        if iV in nIndices and iV in tIndices and iV in uIndices:
+                            if iV not in indices:
+                                indices.append(iV)
+                            vExists = True
+                            break
+
+                    if(vExists):
+                        continue
+
+                if len(verts) not in indices:
+                    indices.append(len(verts))
+
+                    verts.append(vert)
+                    normals.append(normal)
+                    tangents.append(tangent)
+                    uv_coords.append(uv)
+
+        if len(indices) == 3:
+            faces.append((indices[0], indices[1], indices[2]))
+        else:
+            utils.Log.info("Critical Error: Face has " + str(len(indices)) + " vertices!")
+
     #Returns Array of Pdx_Meshs
     #Takes Mesh Object
     def splitMeshes(self, obj, transform_mat, boneIDs=None):
@@ -163,82 +235,39 @@ class PdxFileExporter:
         utils.Log.debug(material_list['materials'])
 
         for material in material_list['materials']:
-            utils.Log.debug("Mat: " + material)
+            #utils.Log.debug("Mat: " + material)
+            utils.Log.info("Compiling Mesh...")
+
+            verts = []
+            faces = []
+
+            normals = []
+            tangents = []
+            uv_coords = []
+
             #TODO: Split mesh if it has more than 35000 verts (maybe check for actual Clausewitz-Engine limitation)
             bmesh_data = self.get_bmesh_data_for_material(bm_complete, material_list, list(material_list['materials']), material, skin_data)
 
-            utils.Log.info("Generating PdxMeshes...")
-
             bm = bmesh_data['mesh']
 
-            for vert in bm.verts:
-                vert.co = vert.co * transform_mat
-
             bm.verts.index_update()
             bm.faces.index_update()
             bm.verts.ensure_lookup_table()
-
-            normals = []
-            verts = []
-            tangents = []
-
-            for i in range(len(bm.verts)):
-                verts.append(bm.verts[i].co.copy())
-                bm.verts[i].normal_update()
-                normal_temp = bm.verts[i].normal * transform_mat
-                normal_temp.normalize()
-                normals.append(normal_temp)
-
             bm.faces.ensure_lookup_table()
-            bm.verts.ensure_lookup_table()
-            bm.verts.index_update()
-            bm.faces.index_update()
 
-            uv_coords = {}
-            uv_layer = bm.loops.layers.uv.active
+            uv_active = bm.loops.layers.uv.active
 
             for face in bm.faces:
-                for loop in face.loops:
-                    uv_coords[loop.vert.index] = loop[uv_layer].uv.copy()
-                    uv_coords[loop.vert.index][1] = 1 - uv_coords[loop.vert.index][1]
+                self.handle_BMesh_Face(face, verts, faces, normals, tangents, uv_coords, transform_mat, uv_active)
 
-            print(len(uv_coords))
+            print("Vert: " + str(len(verts)))
+            print("Norm: " + str(len(normals)))
+            for n in normals:
+                print(n)
+            print("Tang: " + str(len(tangents)))
+            print("Text: " + str(len(uv_coords)))
 
-            max_index = 0
-
-            bm.faces.ensure_lookup_table()
-            bm.verts.ensure_lookup_table()
-            bm.verts.index_update()
-            bm.faces.index_update()
-
-            for i in range(len(bm.verts)):
-                if len(bm.verts[i].link_faces) > 0:#For Models with stray vertices...
-                    tangents.append(bm.verts[i].link_faces[0].calc_tangent_vert_diagonal().to_4d() * transform_mat)
-                else:
-                    tangents.append((0.0, 0.0, 0.0, 0.0))
-
-            #Trim data, remove empty bytes
-            for i in range(len(uv_coords)):
-                if uv_coords[i][0] == 0.0 and uv_coords[i][1] == 0.0:
-                    max_index = i - 1
-                    break
-
-            #del uv_coords[max_index:(len(uv_coords) - 1)]
-
-            print("LenVe: " + str(len(verts)))
-            print("LenNo: " + str(len(normals)))
-            print("LenTa: " + str(len(tangents)))
-            print("LenUV: " + str(len(uv_coords)))
-
-            faces = []
-
-            for face in bm.faces:
-                temp = []
-
-                for loop in face.loops:
-                    temp.append(loop.vert.index)
-
-                faces.append(temp)
+            print("Face: " + str(len(faces)))
 
             bb_min = [math.inf, math.inf, math.inf]
             bb_max = [-math.inf, -math.inf, -math.inf]
@@ -248,14 +277,17 @@ class PdxFileExporter:
                     bb_min[j] = min([verts[i][j], bb_min[j]])
                     bb_max[j] = max([verts[i][j], bb_max[j]])
 
+            utils.Log.info("Generating PdxMeshes...")
 
             result_mesh = pdx_data.PdxMesh()
 
             result_mesh.verts = verts
+            result_mesh.faces = faces
+
             result_mesh.normals = normals
             result_mesh.tangents = tangents
             result_mesh.uv_coords = uv_coords
-            result_mesh.faces = faces
+
             result_mesh.meshBounds = pdx_data.PdxBounds(bb_min, bb_max)
             result_mesh.material = pdx_data.PdxMaterial()
 
@@ -365,6 +397,58 @@ class PdxFileExporter:
             result_file.write(pdxObjects[i].get_binary_data())
 
         result_file.close()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 """
 
         world = pdx_data.PdxWorld([])

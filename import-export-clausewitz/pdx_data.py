@@ -46,29 +46,27 @@ class PdxFile():
         for i in range(name_length):
             name += buffer.NextChar()
 
-        #name = utils.TranslatePropertyName(name) Umbenennen verwirrt nur!
-        #print("Property: " + name)
+        print("Property: " + name)
 
         char = buffer.NextChar()
 
         if char == "i":
             data_count = buffer.NextUInt32()
-            #print("Count: ")
+            print("Count: " + str(data_count))
             for i in range(data_count):
                 temp = buffer.NextInt32()
                 property_data.append(temp)
-                #print("Integer: " + str(temp))
+                print("Integer: " + str(temp))
 
             if name == "pdxasset":
                 print("PDXAsset: " + str(property_data))
         elif char == "f":
             data_count = buffer.NextUInt32()
-
+            print("Count: " + str(data_count))
             for i in range(data_count):
                 temp = buffer.NextFloat32()
                 property_data.append(temp)
-                #if name == "min" or name == "max":
-                    #print("Float: " + str(temp))
+                print("Float: " + str(temp))
         elif char == "s":
             value = ""
             stringType = buffer.NextUInt32()
@@ -519,10 +517,12 @@ class PdxMesh():
 
         if len(self.normals) > 0:
             result.extend(struct.pack("<cb2sI", b'!', 1, b'nf', len(self.normals) * 3))
+            print("N")
 
             for i in range(len(self.normals)):
                 for j in range(3):
                     result.extend(struct.pack("<f", self.normals[i][j]))
+                    print(self.normals[i][j])
         else:
             print("WARNING ::: No Normals found! (Ok for Collision Material)")
 
@@ -559,6 +559,7 @@ class PdxMesh():
         else:
             print("WARNING ::: No Skin found!")
 
+        print(str(result))
         return result
 
 class PdxMaterial():
