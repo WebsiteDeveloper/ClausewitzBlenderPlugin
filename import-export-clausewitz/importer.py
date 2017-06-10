@@ -144,6 +144,7 @@ class PdxFileImporter:
                                     uv_layer = bm.loops.layers.uv.new(name + "_uv")
 
                                     for face in bm.faces:
+                                        face.smooth = True
                                         for loop in face.loops:
                                             loop[uv_layer].uv[0] = meshData.uv_coords[loop.vert.index][0]
                                             loop[uv_layer].uv[1] = 1 - meshData.uv_coords[loop.vert.index][1]

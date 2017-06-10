@@ -388,7 +388,9 @@ class PdxFileExporter:
                                 pdxWorld.objects.append(pdxShape)
                 elif obj.type == "EMPTY":
                     if obj.parent is not None and obj.parent.name.lower() == "locators":
-                        locator = pdx_data.PdxLocator(obj.name, obj.location * self.transform_mat)
+                        location = obj.location * self.transform_mat
+                        location = (-location[0], location[1], -location[2])
+                        locator = pdx_data.PdxLocator(obj.name, location)
                         obj.rotation_mode = 'QUATERNION'
                         locator.quaternion = obj.rotation_quaternion
                         #TODO locator.parent
