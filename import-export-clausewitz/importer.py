@@ -1,17 +1,19 @@
-import bpy
-import bmesh
-import mathutils
-import math
+from pathlib import Path
 import os
 import io
+import math
+import mathutils
 import random
-from pathlib import Path
+
+import bpy
+import bmesh
+
 from . import (pdx_data, utils)
 
 class PdxFileImporter:
     def __init__(self, filename):
-        print("------------------------------------")
-        print("Importing: " + filename + "\n\n\n\n\n")
+        utils.Log.info("------------------------------------")
+        utils.Log.info("Importing: " + filename + "\n\n\n\n\n")
         self.file = pdx_data.PdxFile(filename)
         self.file.read()
 
@@ -21,8 +23,8 @@ class PdxFileImporter:
 
         for node in self.file.nodes:
             if isinstance(node, pdx_data.PdxAsset):
-                print("Importer: PDXAsset")
-                print("PDXAsset Version " + str(node.version[0]) + "." + str(node.version[1]))
+                utils.Log.info("Importer: PDXAsset")
+                utils.Log.info("PDXAsset Version " + str(node.version[0]) + "." + str(node.version[1]))
             elif isinstance(node, pdx_data.PdxWorld):
                 for shape in node.objects:
                     bpy.ops.object.select_all(action='DESELECT')
@@ -64,10 +66,10 @@ class PdxFileImporter:
                                 transformationMatrix[2][0:4] = joint.transform[2], joint.transform[5], joint.transform[8], joint.transform[11]
                                 transformationMatrix[3][0:4] = 0, 0, 0, 1
 
-                                #print(transformationMatrix.decompose())
+                                #utils.Log.info(transformationMatrix.decompose())
 
                                 if joint.parent >= 0:
-                                    print("Joint: " + joint.name)
+                                    utils.Log.info("Joint: " + joint.name)
                                     parent = amt.edit_bones[boneNames[joint.parent]] 
                                     bone.parent = parent
                                     bone.head = parent.tail
@@ -114,7 +116,7 @@ class PdxFileImporter:
                                         sub_object.vertex_groups.new(name)
 
                                     if meshData.skin is not None:
-                                        print("BPV: " + str(meshData.skin.bonesPerVertice))
+                                        utils.Log.info("BPV: " + str(meshData.skin.bonesPerVertice))
                                         bpv = meshData.skin.bonesPerVertice
                                         bpv = 4
 
@@ -168,7 +170,7 @@ class PdxFileImporter:
                                         image = bpy.data.images.load(str(altImageFile))
                                         tex.image = image
                                     else:
-                                        print("No Texture File was found.")
+                                        utils.Log.info("No Texture File was found.")
 
                                     slot = mat.texture_slots.add()
                                     slot.texture = tex
@@ -182,7 +184,7 @@ class PdxFileImporter:
 
                                 bm.to_mesh(sub_mesh)
                             else:
-                                print("ERROR ::: Invalid Object in Shape: " + str(meshData))
+                                utils.Log.info("ERROR ::: Invalid Object in Shape: " + str(meshData))
 
                         scn.objects.active = meshObj
                         bpy.ops.object.join()
@@ -195,7 +197,7 @@ class PdxFileImporter:
                             bpy.context.object.modifiers["Armature"].object = obj
 
                     else:
-                        print("ERROR ::: Invalid Object in World: " + str(shape))
+                        utils.Log.info("ERROR ::: Invalid Object in World: " + str(shape))
             elif isinstance(node, pdx_data.PdxLocators):
                 parent_locator = bpy.data.objects.new('Locators', None)
                 bpy.context.scene.objects.link(parent_locator)
@@ -216,7 +218,7 @@ class PdxFileImporter:
                     #constraint = obj.constraints.new('CHILD_OF')
                     #constraint.target = parentBoneName
             else:
-                print("ERROR ::: Invalid node found: " + str(node))
+                utils.Log.info("ERROR ::: Invalid node found: " + str(node))
 
     def import_anim(self):
         eul = mathutils.Euler((0.0, 0.0, math.radians(180.0)), 'XYZ')
@@ -240,37 +242,37 @@ class PdxFileImporter:
 
         for node in self.file.nodes:
             if isinstance(node, pdx_data.PdxAsset):
-                print("Importer: PDXAsset")#TODOs
-                print("PDXAsset Version " + str(node.version[0]) + "." + str(node.version[1]))
+                utils.Log.info("Importer: PDXAsset")#TODOs
+                utils.Log.info("PDXAsset Version " + str(node.version[0]) + "." + str(node.version[1]))
             elif isinstance(node, pdx_data.PdxAnimInfo):
-                print("Loading AnimInfo...")
-                print("FPS: " + str(node.fps))
+                utils.Log.info("Loading AnimInfo...")
+                utils.Log.info("FPS: " + str(node.fps))
                 scn.render.fps = node.fps
-                print("Samples: " + str(node.samples))
+                utils.Log.info("Samples: " + str(node.samples))
                 scn.frame_start = 1
                 scn.frame_end = node.samples
-                print("Joints: " + str(node.jointCount))
+                utils.Log.info("Joints: " + str(node.jointCount))
 
                 for joint in node.animJoints:
-                    print("Mode: " + joint.sampleMode)
+                    utils.Log.info("Mode: " + joint.sampleMode)
                     if "t" in joint.sampleMode:
-                        print("T")
+                        utils.Log.info("T")
                         tJoints.append(joint)
                     if "q" in joint.sampleMode:
-                        print("Q")
+                        utils.Log.info("Q")
                         qJoints.append(joint)
                     if "s" in joint.sampleMode:
-                        print("S")
+                        utils.Log.info("S")
                         sJoints.append(joint)
 
             elif isinstance(node, pdx_data.PdxAnimSamples):
                 samples = node
 
         if (len(tJoints) > 0 or len(qJoints) > 0 or len(sJoints) > 0) and samples != None:
-            print("Animation detected!")
-            print("T: " + str(len(tJoints)) + "|" + str(len(samples.t) / (scn.frame_end * 3)))
-            print("Q: " + str(len(qJoints)) + "|" + str(len(samples.q) / (scn.frame_end * 4)))
-            print("S: " + str(len(sJoints)) + "|" + str(len(samples.s) / (scn.frame_end * 1)))
+            utils.Log.info("Animation detected!")
+            utils.Log.info("T: " + str(len(tJoints)) + "|" + str(len(samples.t) / (scn.frame_end * 3)))
+            utils.Log.info("Q: " + str(len(qJoints)) + "|" + str(len(samples.q) / (scn.frame_end * 4)))
+            utils.Log.info("S: " + str(len(sJoints)) + "|" + str(len(samples.s) / (scn.frame_end * 1)))
 
             bpy.context.scene.objects.active = armature
             bpy.ops.object.mode_set(mode='POSE')
@@ -283,7 +285,7 @@ class PdxFileImporter:
                     q = vec - mathutils.Vector(qJoint.quaternion)
 
                     if qJoint.name == "tail_1":
-                        print(str(q))
+                        utils.Log.info(str(q))
 
                     bone.rotation_mode = 'QUATERNION'
                     bone.rotation_quaternion = q
@@ -301,4 +303,4 @@ class PdxFileImporter:
 
             bpy.ops.object.mode_set(mode='OBJECT')
         else:
-            print("Invalid File (Joints or Samples missing)")
+            utils.Log.info("Invalid File (Joints or Samples missing)")
