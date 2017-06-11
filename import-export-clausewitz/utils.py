@@ -155,7 +155,7 @@ class LogLevel:
             return ""
 
 class Log:
-    MIN_LOG_LEVEL = LogLevel.DEBUG
+    MIN_LOG_LEVEL = LogLevel.INFO
 
     @staticmethod
     def debug(message):
@@ -188,6 +188,7 @@ class Log:
     @staticmethod
     def emergency(message):
         Log.log(LogLevel.EMERGENCY, message)
+        assert "Emergency Assert"
 
     @staticmethod
     def log(level, message):

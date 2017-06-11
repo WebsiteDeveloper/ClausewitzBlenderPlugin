@@ -37,7 +37,7 @@ class ClausewitzMeshExporter(Operator, ExportHelper):
 
     def execute(self, context):
         pdx = exporter.PdxFileExporter(self.filepath)
-        pdx.export_mesh(bpy.context.active_object.name)
+        pdx.export_mesh()
         return {'FINISHED'}
 
 class ClausewitzMeshImporter(Operator, ImportHelper):

@@ -39,61 +39,18 @@ class PdxFileExporter:
         return {'blender_skin': blender_skin, 'bones_per_vertex': 4}
 
     def get_material_list(self, obj):
-        materials = []
-        faces_for_materials = {}
+        materials = {}
 
         utils.Log.info("Collecting Materials...")
         for mat_slot in obj.material_slots:
-            if mat_slot.material is not None:
-                faces_for_materials[mat_slot.material.name] = []
-                materials.append(mat_slot.material.name)
+            material = mat_slot.material
+            if material is not None:
+                materials[len(materials)] = material.name
+        
+        return materials
 
-        utils.Log.debug(faces_for_materials)
-
-        utils.Log.info("Getting Faces for Materials...")
-        for face in obj.data.polygons:
-            mat = None
-
-            if len(obj.material_slots) != 0:
-                slot = obj.material_slots[face.material_index]
-                mat = slot.material
-
-            if mat is not None:
-                faces_for_materials[mat.name].append(face.index)
-            else:
-                utils.Log.notice("No Custom Material for Face: " + str(face.index) + " in Slot: " + str(face.material_index))
-                faces_for_materials["Default"].append(face.index)
-
-        return {'materials': materials, 'faces_for_materials': faces_for_materials}
-
-    def get_bmesh_data_for_material(self, bm_complete, material_list, materials, selected_material, skin_data):
-        removed_count = 0
+    def get_Skin(self, skin_data):
         skin = None
-
-        temp = bm_complete.copy()
-
-        stray_vertices = []
-        stray_vertices_indices = []
-
-        temp.faces.ensure_lookup_table()
-        temp.verts.ensure_lookup_table()
-        temp.verts.index_update()
-        temp.faces.index_update()
-
-        utils.Log.info("Removing Faces...")
-
-        materials.remove(selected_material)
-
-        for remove_material in materials:
-            for index in material_list['faces_for_materials'][remove_material]:
-                temp.faces.remove(temp.faces[index - removed_count])
-                temp.faces.ensure_lookup_table()
-                removed_count += 1
-
-        for vert in temp.verts:
-            if len(vert.link_faces) == 0:
-                stray_vertices.append(vert)
-                stray_vertices_indices.append(vert.index)
 
         if skin_data is not None:
             skin = pdx_data.PdxSkin()
@@ -119,130 +76,118 @@ class PdxFileExporter:
             utils.Log.debug(len(skin.indices))
             utils.Log.debug(len(skin.weight))
 
-        utils.Log.info("Remove Stray Vertices...")
+        return skin
 
-        for vert in stray_vertices:
-            temp.verts.remove(vert)
-            temp.verts.ensure_lookup_table()
-
-        return {'mesh': temp, 'skin': skin, 'material': selected_material}
-
+    #Exports one face into the global arrays
     def handle_BMesh_Face(self, face):
-
+        #Indices of the Face
         indices = []
-        usedVertices = [] #For Speed
 
         for v in face.verts:
-
+            #Calculate Vertex Position
             vert = v.co * self.transform_mat
-            #utils.Log.info("VC: " + str(v.co))
 
-            #TODO Auto Edge Split on sharp Edges (For now in workflow before Export)
+            # TODO Auto Edge Split on sharp Edges (For now in workflow before Export)
+            #Caluculate Normal Vector (Depending on Face smoothness)
             if face.smooth:
                 normal = v.normal * self.transform_mat
             else:
                 normal = face.normal * self.transform_mat
             normal.normalize()
 
+            #Caluculate Tangent Vector
+            tangent = v.link_faces[0].calc_tangent_vert_diagonal().to_4d() * self.transform_mat
+
+            #Getting all UV Layers
+            loops = face.loops
+
+            #Caluculate UV Vector
+            for loop in loops:
+                if loop.vert == v:
+                    uv = loop[self.uv_active].uv.copy()
+                    uv[1] = 1 - uv[1]
+
+            #Round Values (because of the compare)
+            for i in range(2):
+                uv[i] = round(uv[i], 6)
             for i in range(3):
                 vert[i] = round(vert[i], 6)
                 normal[i] = round(normal[i], 6)
-
-            vert.freeze()
-            #utils.Log.info("Vert: " + str(vert))
-            normal.freeze()
-            #utils.Log.info("Normal: " + str(normal))
-
-            if len(v.link_faces) > 0:#For Models with stray vertices...
-                tangent = v.link_faces[0].calc_tangent_vert_diagonal().to_4d() * self.transform_mat
-            else:
-                #This should also remove stray vertices from event getting exported!
-                #Wait they are not even found because im only exporting faces! Awesome!
-                utils.Log.info("Critical Error: Face has an Vertex without faces!")
-                continue
-
             for i in range(4):
                 tangent[i] = round(tangent[i], 6)
 
+            #Freezing the vectors so they can be hashed
+            vert.freeze()
+            utils.Log.debug("Vert: " + str(vert))
+            normal.freeze()
+            utils.Log.debug("Normal: " + str(normal))
             tangent.freeze()
-            #utils.Log.info("Tangent: " + str(tangent))
+            utils.Log.debug("Tangent: " + str(tangent))
+            uv.freeze()
+            utils.Log.debug("UV: " + str(uv))
 
-            for loop in v.link_loops:
-                if loop.face != face:
-                    continue
+            #Reading old Vertex-Index from indexMap
+            oldIndex = self.indexMap.get((vert,normal,tangent,uv))
 
-                uv = loop[self.uv_active].uv.copy()
-                uv[1] = 1 - uv[1]
+            #Checking if Vertex already exists
+            if oldIndex is not None:
+                #Vertex exists -> Old index is used
+                utils.Log.debug("Old Index: " + str(oldIndex))
 
-                for i in range(2):
-                    uv[i] = round(uv[i], 6)
-
-                uv.freeze()
-                #utils.Log.info("UV: " + str(uv))
-
-                oldIndex = self.indexMap.get((vert,normal,tangent,uv))
-
-                if oldIndex is not None:
-                    #utils.Log.info("Old Index: " + str(oldIndex))
-                    indices.append(oldIndex)
-                    continue
-
+                indices.append(oldIndex)
+            else:
+                #Vertex does not yet exist
                 index = len(self.verts)
-                #utils.Log.info("New Index: " + str(index))
+                utils.Log.debug("New Index: " + str(index))
 
-                if index not in indices:
-                    indices.append(index)
+                indices.append(index)
 
-                    self.verts.append(vert)
-                    self.normals.append(normal)
-                    self.tangents.append(tangent)
-                    self.uv_coords.append(uv)
+                self.verts.append(vert)
+                self.normals.append(normal)
+                self.tangents.append(tangent)
+                self.uv_coords.append(uv)
 
-                    self.indexMap[(vert,normal,tangent,uv)] = index
+                #Needed for Speed
+                self.indexMap[(vert,normal,tangent,uv)] = index
 
+        #Face should be Triangulated, but if not it ignores the face and continues
         if len(indices) == 3:
             self.faces.append((indices[0], indices[1], indices[2]))
         else:
-            utils.Log.info("Critical Error: Face has " + str(len(indices)) + " vertices!")
+            #TODO Auto-Triangulation (Recursive Algorithm)
+            utils.Log.critical("Face has " + str(len(indices)) + " vertices!")
 
-    #Returns Array of Pdx_Meshs
-    #Takes Mesh Object
+    #Exports one BMesh into X PdxMeshes (Splitted on Material and Size)
     def splitMeshes(self, obj, boneIDs=None):
-        utils.Log.info("Exporting and splitting Mesh...")
+        utils.Log.info("Exporting \"" + obj.name + "\"!")
 
+        #Array of splitted PdxMeshes
         result_meshes = []
-        bmeshes = []
-        material_list = None
-        skin_data = None
 
+        #Raw Blender Mesh
         mesh = obj.data
 
-        utils.Log.info("Check If Mesh is Triangulated...")
-        for polygon in mesh.polygons:
-            if polygon.loop_total > 3:
-                utils.Log.critical("Mesh is Not Triangulated...")
-                return result_meshes
-
+        #Skinnning Data
         if boneIDs != None:
             skin_data = self.get_skinning_data(obj, boneIDs)
 
-        material_list = self.get_material_list(obj)
+        #Material List (for splitting along them)
+        materials = self.get_material_list(obj)
 
-        #Base Bmesh Generation Start
-        bm_complete = bmesh.new()
-        bm_complete.from_mesh(mesh)
+        #Base Bmesh Generation
+        bMesh = bmesh.new()
+        bMesh.from_mesh(mesh)
 
-        bm_complete.faces.ensure_lookup_table()
-        bm_complete.verts.ensure_lookup_table()
-        bm_complete.verts.index_update()
-        bm_complete.faces.index_update()
-        #Base Bmesh Generation End
+        bMesh.faces.ensure_lookup_table()
+        bMesh.verts.ensure_lookup_table()
+        bMesh.verts.index_update()
+        bMesh.faces.index_update()
 
-        utils.Log.debug(material_list['materials'])
-
-        for material in material_list['materials']:
-            #utils.Log.debug("Mat: " + material)
-            utils.Log.info("Compiling Mesh...")
+        bpy.context.window_manager.progress_begin(0, len(bMesh.faces))
+        #Handling all Materials Seperate for Export
+        for index,material in materials.items():
+            bm = bMesh.copy()
+            utils.Log.info("Compiling Mesh for Material \"" + material + "\"!")
 
             self.verts = []
             self.faces = []
@@ -253,11 +198,6 @@ class PdxFileExporter:
 
             self.indexMap = {}
 
-            #TODO: Split mesh if it has more than 35000 verts (maybe check for actual Clausewitz-Engine limitation)
-            bmesh_data = self.get_bmesh_data_for_material(bm_complete, material_list, list(material_list['materials']), material, skin_data)
-
-            bm = bmesh_data['mesh']
-
             bm.verts.index_update()
             bm.faces.index_update()
             bm.verts.ensure_lookup_table()
@@ -265,11 +205,10 @@ class PdxFileExporter:
 
             self.uv_active = bm.loops.layers.uv.active
 
-            bpy.context.window_manager.progress_begin(0, len(bm.faces))
             for face in bm.faces:
-                self.handle_BMesh_Face(face)
+                if face.material_index == index:
+                    self.handle_BMesh_Face(face)
                 bpy.context.window_manager.progress_update(len(self.faces))
-            bpy.context.window_manager.progress_end()
 
             utils.Log.info("Vert: " + str(len(self.verts)))
             utils.Log.info("Norm: " + str(len(self.normals)))
@@ -296,6 +235,8 @@ class PdxFileExporter:
             result_mesh.tangents = self.tangents
             result_mesh.uv_coords = self.uv_coords
 
+            if boneIDs != None:
+                result_mesh.skin = self.get_Skin(self, skin_data)
             result_mesh.meshBounds = pdx_data.PdxBounds(bb_min, bb_max)
             result_mesh.material = pdx_data.PdxMaterial()
 
@@ -324,10 +265,11 @@ class PdxFileExporter:
             utils.Log.info("Cleaning up BMesh...")
             bm.free()
 
+        bpy.context.window_manager.progress_end()
         utils.Log.info("Return resulting Meshes...")
         return result_meshes
 
-    def export_mesh(self, name):
+    def export_mesh(self):
         #Rotation Matrix to Transform from Y-Up Space to Z-Up Space
         mat_rot = mathutils.Matrix.Rotation(math.radians(90.0), 4, 'X')
 
