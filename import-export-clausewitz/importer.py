@@ -211,6 +211,7 @@ class PdxFileImporter:
                     obj.location = mathutils.Vector((locator.pos[0], locator.pos[1], locator.pos[2])) * mat_rot
                     obj.rotation_mode = 'QUATERNION'
                     obj.rotation_quaternion = locator.quaternion
+                    obj.rotation_mode = 'XYZ'
 
                     #TODO Locator Parenting
                     #parentBoneName = locator.parent
@@ -289,6 +290,7 @@ class PdxFileImporter:
 
                     bone.rotation_mode = 'QUATERNION'
                     bone.rotation_quaternion = q
+                    bone.rotation_mode = 'XYZ'
                     bone.keyframe_insert(data_path="rotation_quaternion" ,frame=f+1)
 
             for i in range(len(tJoints)):

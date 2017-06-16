@@ -36,7 +36,7 @@ class PdxFileExporter:
         #
         #utils.Log.debug("BPV: " + str(bones_per_vertex))
 
-        return {'blender_skin': blender_skin, 'bones_per_vertex': 4}
+        return {'blender_skin': blender_skin, 'bones_per_vertex': bones_per_vertex}
 
     def get_material_list(self, obj):
         materials = {}
@@ -58,16 +58,15 @@ class PdxFileExporter:
             weights = []
 
             for index, data in skin_data['blender_skin'].items():
-                if index not in stray_vertices_indices:
-                    temp_indices = [-1] * skin_data['bones_per_vertex']
-                    temp_weights = [0] * skin_data['bones_per_vertex']
+                temp_indices = [-1] * skin_data['bones_per_vertex']
+                temp_weights = [0] * skin_data['bones_per_vertex']
 
-                    for i in range(0, len(data)):
-                        temp_indices[i] = next(iter(data[i].keys()))
-                        temp_weights[i] = data[i][temp_indices[i]]
+                for i in range(0, len(data)):
+                    temp_indices[i] = next(iter(data[i].keys()))
+                    temp_weights[i] = data[i][temp_indices[i]]
 
-                    indices.extend(temp_indices)
-                    weights.extend(temp_weights)
+                indices.extend(temp_indices)
+                weights.extend(temp_weights)
 
             skin.bonesPerVertice = skin_data['bones_per_vertex']
             skin.indices = indices
@@ -155,7 +154,7 @@ class PdxFileExporter:
             self.faces.append((indices[0], indices[1], indices[2]))
         else:
             #TODO Auto-Triangulation (Recursive Algorithm)
-            utils.Log.critical("Face has " + str(len(indices)) + " vertices!")
+            utils.Log.critical("Face has " + str(len(indices)) + " vertices! (Not Triangulated)")
 
     #Exports one BMesh into X PdxMeshes (Splitted on Material and Size)
     def splitMeshes(self, obj, boneIDs=None):
@@ -186,7 +185,6 @@ class PdxFileExporter:
         bpy.context.window_manager.progress_begin(0, len(bMesh.faces))
         #Handling all Materials Seperate for Export
         for index,material in materials.items():
-            bm = bMesh.copy()
             utils.Log.info("Compiling Mesh for Material \"" + material + "\"!")
 
             self.verts = []
@@ -196,26 +194,32 @@ class PdxFileExporter:
             self.tangents = []
             self.uv_coords = []
 
+            #Used for Speed
             self.indexMap = {}
+
+            #Copying all Data
+            bm = bMesh.copy()
 
             bm.verts.index_update()
             bm.faces.index_update()
             bm.verts.ensure_lookup_table()
             bm.faces.ensure_lookup_table()
 
+            #Setting active UV-Layer
             self.uv_active = bm.loops.layers.uv.active
 
+            #Compiling all Faces into the Arrays
             for face in bm.faces:
+                #Check if face is part of selected Material
                 if face.material_index == index:
                     self.handle_BMesh_Face(face)
-                bpy.context.window_manager.progress_update(len(self.faces))
+                    bpy.context.window_manager.progress_update(len(self.faces))
 
-            utils.Log.info("Vert: " + str(len(self.verts)))
-            utils.Log.info("Norm: " + str(len(self.normals)))
-            utils.Log.info("Tang: " + str(len(self.tangents)))
-            utils.Log.info("Text: " + str(len(self.uv_coords)))
-            utils.Log.info("Face: " + str(len(self.faces)))
+            #Print Counts
+            utils.Log.info("Vertices: " + str(len(self.verts)))
+            utils.Log.info("Faces: " + str(len(self.faces)))
 
+            #Calculating Bounding Box
             bb_min = [math.inf, math.inf, math.inf]
             bb_max = [-math.inf, -math.inf, -math.inf]
 
@@ -240,6 +244,7 @@ class PdxFileExporter:
             result_mesh.meshBounds = pdx_data.PdxBounds(bb_min, bb_max)
             result_mesh.material = pdx_data.PdxMaterial()
 
+            #Generating Material
             diff_file = "test_diff"
 
             if len(obj.material_slots) > 0:
@@ -255,14 +260,16 @@ class PdxFileExporter:
             else:
                 diff_file = os.path.basename(mesh.uv_textures[0].data[0].image.filepath)
 
+            #Setting Materials (Not very importing, because it's overridenn in .gfx file)
             result_mesh.material.shader = "PdxMeshShip"
             result_mesh.material.diff = diff_file
             result_mesh.material.spec = diff_file.replace("diff", "spec")
             result_mesh.material.normal = diff_file.replace("diff", "normal")
 
+            #Adding Mesh to List
             result_meshes.append(result_mesh)
 
-            utils.Log.info("Cleaning up BMesh...")
+            utils.Log.info("Cleaning up BMesh...\n")
             bm.free()
 
         bpy.context.window_manager.progress_end()
@@ -271,7 +278,8 @@ class PdxFileExporter:
 
     def export_mesh(self):
         #Rotation Matrix to Transform from Y-Up Space to Z-Up Space
-        mat_rot = mathutils.Matrix.Rotation(math.radians(90.0), 4, 'X')
+        self.mat_rot = mathutils.Matrix.Rotation(math.radians(90.0), 4, 'X')
+        #self.mat_blenderFail = mathutils.Matrix((1,0,0,0),(0,-1,0,0),(0,0,-1,0),(0,0,0,1))
 
         pdxObjects = []
         pdxObjects.append(pdx_data.PdxAsset())
@@ -280,62 +288,61 @@ class PdxFileExporter:
         pdxWorld = pdx_data.PdxWorld()
 
         for obj in bpy.data.objects:
-            self.transform_mat = obj.matrix_world * mat_rot
-            if obj.select:
-                if obj.type == "MESH":
-                    if obj.parent is None:
+            self.transform_mat = obj.matrix_world * self.mat_rot
+            if obj.type == "MESH":
+                if obj.select and obj.parent is None:
                         pdxShape = pdx_data.PdxShape(obj.name)
 
                         pdxShape.meshes = self.splitMeshes(obj)
                         pdxWorld.objects.append(pdxShape)
-                elif obj.type == "ARMATURE":
-                    if obj.parent is None:
-                        #Highly Inefficient for now
-                        for child in bpy.data.objects:
-                            if child.parent == obj:
-                                pdxSkeleton = pdx_data.PdxSkeleton()
+            elif (obj.type == "ARMATURE"):
+                if obj.select and obj.parent is None:
+                    pdxSkeleton = pdx_data.PdxSkeleton()
 
-                                boneIDs = {}
+                    boneIDs = {}
 
-                                for i in range(len(obj.data.bones)):
-                                    bone = obj.data.bones[i]
-                                    boneIDs[bone.name] = i
+                    for i in range(len(obj.data.bones)):
+                        bone = obj.data.bones[i]
+                        boneIDs[bone.name] = i
+                            
+                    for i in range(len(obj.data.bones)):
+                        bone = obj.data.bones[i]
+                        utils.Log.info("Joint: " + bone.name)
+                        utils.Log.info(str(boneIDs[bone.name]))
+                        pdxJoint = pdx_data.PdxJoint(bone.name)
+                        pdxJoint.index = boneIDs[bone.name]
+                        if bone.parent is not None:
+                            utils.Log.info("Parent: " + str(bone.parent))
+                            utils.Log.info("Parent ID: " + str(boneIDs[bone.parent.name]))
+                            pdxJoint.parent = boneIDs[bone.parent.name]
+                        else:
+                            utils.Log.info("Root Bone")
 
-                                for i in range(len(obj.data.bones)):
-                                    bone = obj.data.bones[i]
-                                    utils.Log.info("Joint: " + bone.name)
-                                    utils.Log.info(str(boneIDs[bone.name]))
-                                    pdxJoint = pdx_data.PdxJoint(bone.name)
-                                    pdxJoint.index = boneIDs[bone.name]
-                                    if bone.parent is not None:
-                                        utils.Log.info("Parent: " + str(bone.parent))
-                                        utils.Log.info("Parent ID: " + str(boneIDs[bone.parent.name]))
-                                        pdxJoint.parent = boneIDs[bone.parent.name]
-                                    else:
-                                        utils.Log.info("Root Bone")
+                        pdxJoint.transform = bone.matrix_local[:12]
+                        #pdxJoint.transform = [1, 0, 0, 0, 1, 0, 0, 0, 1, bone.tail[0], bone.tail[1], bone.tail[2]]
 
-                                    #WIP
-                                    pdxJoint.transform = [1, 0, 0, 0, 1, 0, 0, 0, 1, bone.tail[0], bone.tail[1], bone.tail[2]]
+                        pdxSkeleton.joints.append(pdxJoint)
 
-                                    pdxSkeleton.joints.append(pdxJoint)
+                    pdxShape = pdx_data.PdxShape(obj.name)
+                    pdxShape.skeleton = pdxSkeleton
 
-                                pdxShape = pdx_data.PdxShape(obj.name)
-                                pdxShape.skeleton = pdxSkeleton
+                    for child in bpy.data.objects:
+                        if child.parent == obj and child.type == "MESH":
+                            pdxShape.meshes = self.splitMeshes(child)
 
-                                pdxShape.meshes = self.splitMeshes(obj)
-                                pdxWorld.objects.append(pdxShape)
-                elif obj.type == "EMPTY":
-                    if obj.parent is not None and obj.parent.name.lower() == "locators":
-                        location = obj.location * self.transform_mat
-                        location = (-location[0], location[1], -location[2])
-                        locator = pdx_data.PdxLocator(obj.name, location)
-                        obj.rotation_mode = 'QUATERNION'
-                        locator.quaternion = obj.rotation_quaternion
-                        #TODO locator.parent
+                    pdxWorld.objects.append(pdxShape)
+            elif obj.type == "EMPTY":
+                if (obj.parent is not None and obj.parent.select) or obj.select:
+                    location = obj.matrix_world.decompose()[0] * self.mat_rot
+                    locator = pdx_data.PdxLocator(obj.name, location)
+                    obj.rotation_mode = 'QUATERNION'
+                    locator.quaternion = obj.matrix_world.decompose()[1]
+                    obj.rotation_mode = 'XYZ'
+                    #TODO locator.parent
 
-                        pdxLocators.locators.append(locator)
-                else:
-                    utils.Log.info("Exporter: Invalid Type Selected: " + obj.type)
+                    pdxLocators.locators.append(locator)
+            else:
+                utils.Log.notice("Invalid Type Selected: " + obj.type)
 
         pdxObjects.append(pdxWorld)
 
