@@ -1,4 +1,5 @@
 import struct
+import datetime
 
 class BufferReader:
     def __init__(self, buffer):
@@ -49,9 +50,9 @@ class BufferReader:
     def SetCurrentOffset(self, offset):
         self.__offset__ = offset
 
-def PreviewObjectDepth(buffer: BufferReader, startDepth=0):
+def PreviewObjectDepth(buffer: BufferReader, startDepth=-1):
     offsetTemp = buffer.GetCurrentOffset()
-
+    
     while buffer.NextChar() == "[":
         startDepth += 1
 
@@ -121,3 +122,74 @@ def TransposeCoordinateArray2D(data):
         return result
     else:
         return result
+
+class LogLevel:
+    DEBUG = 1
+    INFO = 2
+    NOTICE = 3
+    WARNING = 4
+    ERROR = 5
+    CRITICAL = 6
+    ALERT = 7
+    EMERGENCY = 8
+
+    @staticmethod
+    def GetLogLevelString(level):
+        if level == LogLevel.DEBUG:
+            return "DEBUG"
+        elif level == LogLevel.INFO:
+            return "INFO"
+        elif level == LogLevel.NOTICE:
+            return "NOTICE"
+        elif level == LogLevel.WARNING:
+            return "WARNING"
+        elif level == LogLevel.ERROR:
+            return "ERROR"
+        elif level == LogLevel.CRITICAL:
+            return "CRITICAL"
+        elif level == LogLevel.ALERT:
+            return "ALERT"
+        elif level == LogLevel.EMERGENCY:
+            return "EMERGENCY"
+        else:
+            return ""
+
+class Log:
+    MIN_LOG_LEVEL = LogLevel.DEBUG
+
+    @staticmethod
+    def debug(message):
+        Log.log(LogLevel.DEBUG, message)
+
+    @staticmethod
+    def info(message):
+        Log.log(LogLevel.INFO, message)
+    
+    @staticmethod
+    def notice(message):
+        Log.log(LogLevel.NOTICE, message)
+
+    @staticmethod
+    def warning(message):
+        Log.log(LogLevel.WARNING, message)
+
+    @staticmethod
+    def error(message):
+        Log.log(LogLevel.ERROR, message)
+
+    @staticmethod
+    def critical(message):
+        Log.log(LogLevel.CRITICAL, message)
+
+    @staticmethod
+    def alert(message):
+        Log.log(LogLevel.ALERT, message)
+
+    @staticmethod
+    def emergency(message):
+        Log.log(LogLevel.EMERGENCY, message)
+
+    @staticmethod
+    def log(level, message):
+        if level >= Log.MIN_LOG_LEVEL:
+            print(str(datetime.datetime.now()).split('.')[0] + " - " + LogLevel.GetLogLevelString(level) + " ::: " + str(message))

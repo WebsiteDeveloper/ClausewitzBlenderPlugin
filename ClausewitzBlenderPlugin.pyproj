@@ -6,20 +6,17 @@
     <ProjectGuid>{1c1d5287-03be-4214-9c31-5a225e6e3cdb}</ProjectGuid>
     <ProjectHome />
     <StartupFile />
-    <SearchPath>..\..\..\..\..\Program Files\Blender Foundation\Blender\2.78\scripts\modules\</SearchPath>
+    <SearchPath>..\..\..\..\..\Program Files\Blender Foundation\Blender\2.78\scripts\modules\;..\..\..\..\..\Program Files\Blender Foundation\Blender\2.78\python\lib</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
     <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <InterpreterId />
-    <InterpreterVersion />
     <PublishUrl>C:\Program Files\Blender Foundation\Blender\2.78\scripts\addons\</PublishUrl>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
   <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
   <PropertyGroup>
     <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
-    <PtvsTargetsFile>$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets</PtvsTargetsFile>
   </PropertyGroup>
   <ItemGroup>
     <Folder Include="import-export-clausewitz\" />
@@ -39,6 +36,5 @@
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>
-  <Import Project="$(PtvsTargetsFile)" Condition="Exists($(PtvsTargetsFile))" />
-  <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" Condition="!Exists($(PtvsTargetsFile))" />
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
 </Project>

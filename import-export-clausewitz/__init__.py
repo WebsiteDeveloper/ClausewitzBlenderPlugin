@@ -15,8 +15,8 @@ bl_info = {
     "tracker_url": "https://github.com/WebsiteDeveloper/ClausewitzBlenderPlugin/issues"
 }
 
-class ClausewitzExporter(Operator, ExportHelper):
-    """Clausewitz Exporter"""
+class ClausewitzMeshExporter(Operator, ExportHelper):
+    """Clausewitz Mesh Exporter"""
     bl_idname = "clausewitz.exporter"
     bl_label = "Export .mesh (Clausewitz Engine)"
 
@@ -25,7 +25,7 @@ class ClausewitzExporter(Operator, ExportHelper):
         description="Check and warn on overwriting existing files",
         default=True,
         options={'HIDDEN'},
-        )
+    )
 
     filename_ext = ".mesh"
 
@@ -40,8 +40,8 @@ class ClausewitzExporter(Operator, ExportHelper):
         pdx.export_mesh(bpy.context.active_object.name)
         return {'FINISHED'}
 
-class ClausewitzImporter(Operator, ImportHelper):
-    """Clausewitz Importer"""
+class ClausewitzMeshImporter(Operator, ImportHelper):
+    """Clausewitz Mesh Importer"""
     bl_idname = "clausewitz.importer"
     bl_label = "Import .mesh (Clausewitz Engine)"
 
@@ -51,11 +51,30 @@ class ClausewitzImporter(Operator, ImportHelper):
         default="*.mesh",
         options={'HIDDEN'},
         maxlen=255,  # Max internal buffer length, longer would be clamped.
-        )
+    )
 
     def execute(self, context):
         pdx = importer.PdxFileImporter(self.filepath)
         pdx.import_mesh()
+
+        return {'FINISHED'}
+
+class ClausewitzAnimImporter(Operator, ImportHelper):
+    """Clausewitz Mesh Importer"""
+    bl_idname = "clausewitz.animimporter"
+    bl_label = "Import .anim (Clausewitz Engine)"
+
+    filename_ext = ".anim"
+
+    filter_glob = StringProperty(
+        default="*.anim",
+        options={'HIDDEN'},
+        maxlen=255,  # Max internal buffer length, longer would be clamped.
+    )
+
+    def execute(self, context):
+        pdx = importer.PdxFileImporter(self.filepath)
+        pdx.import_anim()
 
         return {'FINISHED'}
 
@@ -96,10 +115,11 @@ class OkOperator(bpy.types.Operator):
         return {'FINISHED'}
 
 def menu_func_export(self, context):
-    self.layout.operator(ClausewitzExporter.bl_idname, text="Export .mesh (Clausewitz Engine)")
+    self.layout.operator(ClausewitzMeshExporter.bl_idname, text="Export .mesh (Clausewitz Engine)")
 
 def menu_func_import(self, context):
-    self.layout.operator(ClausewitzImporter.bl_idname, text="Import .mesh (Clausewitz Engine)")
+    self.layout.operator(ClausewitzMeshImporter.bl_idname, text="Import .mesh (Clausewitz Engine)")
+    self.layout.operator(ClausewitzAnimImporter.bl_idname, text="Import .anim (Clausewitz Engine)")
 
 def register():
     bpy.utils.register_module(__name__)
