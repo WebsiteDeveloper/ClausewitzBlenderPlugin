@@ -33,11 +33,29 @@ class ClausewitzMeshExporter(Operator, ExportHelper):
         default="*.mesh",
         options={'HIDDEN'},
         maxlen=255,  # Max internal buffer length, longer would be clamped.
-        )
+    )
+
+    include_Locators = BoolProperty(
+        name="Include Locators",
+        description="If unchecked Locators will be put into .asset instead, if .asset is getting created. [WIP]",
+        default=True,
+    )
+
+    export_gfx = BoolProperty(
+        name="Add .gfx File",
+        description="Exports an additional .gfx file besides the exported mesh.",
+        default=True,
+    )
+
+    export_asset = BoolProperty(
+        name="Add .asset File [WIP]",
+        description="Exports an additional .asset file besides the exported mesh. [WIP]",
+        default=False,
+    )
 
     def execute(self, context):
         pdx = exporter.PdxFileExporter(self.filepath)
-        pdx.export_mesh()
+        pdx.export_mesh(self.export_gfx)
         return {'FINISHED'}
 
 class ClausewitzMeshImporter(Operator, ImportHelper):

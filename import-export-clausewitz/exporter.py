@@ -288,7 +288,7 @@ class PdxFileExporter:
         utils.Log.info("Return resulting Meshes...")
         return result_meshes
 
-    def export_mesh(self):
+    def export_mesh(self, export_gfx):
         bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
         #Rotation Matrix to Transform from Y-Up Space to Z-Up Space
         self.mat_rot = mathutils.Matrix.Rotation(math.radians(90.0), 4, 'X')
@@ -363,22 +363,30 @@ class PdxFileExporter:
         if len(pdxLocators.locators) > 0:
             pdxObjects.append(pdxLocators)
 
+        #Exporting .mesh File
         mesh_file = io.open(self.filename, 'w+b')
-        gfx_file = io.open(self.filename.replace(".mesh", ".gfx"), 'w')
 
         mesh_file.write(b'@@b@')
-        gfx_file.write("objectTypes = {\n");
-        gfx_file.write("    pdxmesh = {\n");
-        gfx_file.write("        name = \"" + self.filenameNoPath.replace(".", "_") + "\"\n")
-        gfx_file.write("        file = \"" + self.filenameNoPath + "\"\n")
-        gfx_file.write("        scale = 1\n")
 
         for i in range(len(pdxObjects)):
             mesh_file.write(pdxObjects[i].get_binary_data())
-            gfx_file.write(pdxObjects[i].get_gfx_data())
-
-        gfx_file.write("    }\n");
-        gfx_file.write("}\n");
 
         mesh_file.close()
-        gfx_file.close()
+
+        #Exporting .gfx File
+        if export_gfx:
+            gfx_file = io.open(self.filename.replace(".mesh", ".gfx"), 'w')
+
+            gfx_file.write("objectTypes = {\n");
+            gfx_file.write("    pdxmesh = {\n");
+            gfx_file.write("        name = \"" + self.filenameNoPath.replace(".", "_") + "\"\n")
+            gfx_file.write("        file = \"" + self.filenameNoPath + "\"\n")
+            gfx_file.write("        scale = 1\n")
+
+            for i in range(len(pdxObjects)):
+                gfx_file.write(pdxObjects[i].get_gfx_data())
+
+            gfx_file.write("    }\n");
+            gfx_file.write("}\n");
+
+            gfx_file.close()
