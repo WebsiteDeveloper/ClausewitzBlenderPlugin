@@ -99,6 +99,9 @@ class PdxFileExporter:
             normal.normalize()
 
             #Caluculate Tangent Vector
+            if len(v.link_faces) == 0:
+                print("Skip")
+                return
             tangent = v.link_faces[0].calc_tangent_vert_diagonal().to_4d() * self.transform_mat
 
             #Getting all UV Layers
@@ -286,6 +289,7 @@ class PdxFileExporter:
         return result_meshes
 
     def export_mesh(self):
+        bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
         #Rotation Matrix to Transform from Y-Up Space to Z-Up Space
         self.mat_rot = mathutils.Matrix.Rotation(math.radians(90.0), 4, 'X')
         self.mat_rot *= mathutils.Matrix.Scale(-1, 4, (1,0,0))
@@ -297,7 +301,6 @@ class PdxFileExporter:
         pdxWorld = pdx_data.PdxWorld()
 
         for obj in bpy.data.objects:
-            #obj.transform_apply(location=False, rotation=True, scale=False)
 
             self.transform_mat = obj.matrix_world * self.mat_rot
             if obj.type == "MESH":
