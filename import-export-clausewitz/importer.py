@@ -20,6 +20,7 @@ class PdxFileImporter:
     def import_mesh(self):
         #Rotation Matrix to Transform from Y-Up Space to Z-Up Space
         mat_rot = mathutils.Matrix.Rotation(math.radians(-90.0), 4, 'X')
+        mat_rot *= mathutils.Matrix.Scale(-1, 4, (1,0,0))
 
         for node in self.file.nodes:
             if isinstance(node, pdx_data.PdxAsset):

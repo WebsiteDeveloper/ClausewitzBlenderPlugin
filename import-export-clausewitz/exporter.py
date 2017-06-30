@@ -288,7 +288,7 @@ class PdxFileExporter:
     def export_mesh(self):
         #Rotation Matrix to Transform from Y-Up Space to Z-Up Space
         self.mat_rot = mathutils.Matrix.Rotation(math.radians(90.0), 4, 'X')
-        #self.mat_blenderFail = mathutils.Matrix((1,0,0,0),(0,-1,0,0),(0,0,-1,0),(0,0,0,1))
+        self.mat_rot *= mathutils.Matrix.Scale(-1, 4, (1,0,0))
 
         pdxObjects = []
         pdxObjects.append(pdx_data.PdxAsset())
