@@ -53,9 +53,25 @@ class ClausewitzMeshExporter(Operator, ExportHelper):
         default=False,
     )
 
+    apply_Location = BoolProperty(
+        name="Apply Location",
+        description="Apply Location",
+        default=False,
+    )
+    apply_rotation = BoolProperty(
+        name="Apply Rotation",
+        description="Apply Rotation",
+        default=True,
+    )
+    apply_size = BoolProperty(
+        name="Apply Size",
+        description="Apply Size",
+        default=False,
+    )
+
     def execute(self, context):
         pdx = exporter.PdxFileExporter(self.filepath)
-        pdx.export_mesh(self.export_gfx)
+        pdx.export_mesh(self)
         return {'FINISHED'}
 
 class ClausewitzMeshImporter(Operator, ImportHelper):

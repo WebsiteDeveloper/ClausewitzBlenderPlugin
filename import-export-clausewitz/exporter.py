@@ -93,16 +93,16 @@ class PdxFileExporter:
             # TODO Auto Edge Split on sharp Edges (For now in workflow before Export)
             #Caluculate Normal Vector (Depending on Face smoothness)
             if face.smooth:
-                normal = v.normal * self.transform_mat
+                normal = v.normal * self.mat_rot
             else:
-                normal = face.normal * self.transform_mat
+                normal = face.normal * self.mat_rot
             normal.normalize()
 
             #Caluculate Tangent Vector
             if len(v.link_faces) == 0:
                 print("Skip")
                 return
-            tangent = v.link_faces[0].calc_tangent_vert_diagonal().to_4d() * self.transform_mat
+            tangent = v.link_faces[0].calc_tangent_vert_diagonal().to_4d() * self.mat_rot
 
             #Getting all UV Layers
             loops = face.loops
@@ -288,8 +288,8 @@ class PdxFileExporter:
         utils.Log.info("Return resulting Meshes...")
         return result_meshes
 
-    def export_mesh(self, export_gfx):
-        bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
+    def export_mesh(self, exporter):
+        bpy.ops.object.transform_apply(location=exporter.apply_Location, rotation=exporter.apply_rotation, scale=exporter.apply_size)
         #Rotation Matrix to Transform from Y-Up Space to Z-Up Space
         self.mat_rot = mathutils.Matrix.Rotation(math.radians(90.0), 4, 'X')
         self.mat_rot *= mathutils.Matrix.Scale(-1, 4, (1,0,0))
@@ -374,7 +374,7 @@ class PdxFileExporter:
         mesh_file.close()
 
         #Exporting .gfx File
-        if export_gfx:
+        if exporter.export_gfx:
             gfx_file = io.open(self.filename.replace(".mesh", ".gfx"), 'w')
 
             gfx_file.write("objectTypes = {\n");
