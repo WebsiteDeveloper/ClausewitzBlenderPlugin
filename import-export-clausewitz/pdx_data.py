@@ -400,6 +400,11 @@ class PdxAsset():
 
         return result
 
+    def get_gfx_data(self):
+        result = ""
+
+        return result
+
 class PdxWorld():
     def __init__(self):
         self.objects = []
@@ -413,6 +418,14 @@ class PdxWorld():
         for o in self.objects:
             result.extend(o.get_binary_data())
         
+        return result
+
+    def get_gfx_data(self):
+        result = ""
+
+        for o in self.objects:
+            result += o.get_gfx_data()
+
         return result
 
 class PdxShape():
@@ -438,6 +451,16 @@ class PdxShape():
 
         return result
 
+
+    def get_gfx_data(self):
+        result = ""
+
+        if self.meshes is not None:
+            for i in range(len(self.meshes)):
+                result += self.meshes[i].get_gfx_data(self.name, i)
+
+        return result
+
 class PdxSkeleton():
     def __init__(self):
         self.joints = []
@@ -449,6 +472,11 @@ class PdxSkeleton():
 
         for joint in self.joints:
             result.extend(joint.get_binary_data())
+
+        return result
+
+    def get_gfx_data(self):
+        result = ""
 
         return result
 
@@ -477,6 +505,10 @@ class PdxJoint():
 
         return result
 
+    def get_gfx_data(self):
+        result = ""
+
+        return result
 
 class PdxMesh():
     def __init__(self):
@@ -559,6 +591,20 @@ class PdxMesh():
 
         return result
 
+    def get_gfx_data(self, name, index):
+        result = "\n"
+
+        result += "        meshsettings = {\n"
+
+        result += "            name = \"" + name + "\"\n"
+        result += "            index = " + str(index) + "\n"
+
+        result += self.material.get_gfx_data()
+
+        result += "        }\n"
+
+        return result
+
 class PdxMaterial():
     def __init__(self):
         #Initialized to Collision for ease of use in exporter
@@ -594,6 +640,16 @@ class PdxMaterial():
 
         return result
 
+    def get_gfx_data(self):
+        result = ""
+
+        result += "            texture_diffuse = \"" + self.diff + "\"\n"
+        result += "            texture_normal = \"" + self.normal + "\"\n"
+        result += "            texture_specular = \"" + self.spec + "\"\n"
+        result += "            texture_specular = \"" + self.shader + "\"\n"
+
+        return result
+
 class PdxBounds():
     def __init__(self, min, max):
         self.min = min
@@ -609,6 +665,11 @@ class PdxBounds():
         result.extend(struct.pack("<Ifff", 3, self.min[0], self.min[1], self.min[2]))
         result.extend(struct.pack("<cb4s", b'!', 3, b'maxf'))
         result.extend(struct.pack("<Ifff", 3, self.max[0], self.max[1], self.max[2]))
+
+        return result
+
+    def get_gfx_data(self):
+        result = ""
 
         return result
 
@@ -633,6 +694,11 @@ class PdxSkin():
 
         return result
 
+    def get_gfx_data(self):
+        result = ""
+
+        return result
+
 class PdxLocators():
     def __init__(self):
         self.bounds = (0, 0)
@@ -646,6 +712,11 @@ class PdxLocators():
 
         for locator in self.locators:
             result.extend(locator.get_binary_data())
+
+        return result
+
+    def get_gfx_data(self):
+        result = ""
 
         return result
 
@@ -673,6 +744,11 @@ class PdxLocator():
 
         return result
 
+    def get_gfx_data(self):
+        result = ""
+
+        return result
+
 # Pdx Anim File
 class PdxAnimInfo():
     def __init__(self):
@@ -693,6 +769,11 @@ class PdxAnimInfo():
 
         for animJoint in self.animJoints:
             result.extend(animJoint.get_binary_data())
+
+        return result
+
+    def get_gfx_data(self):
+        result = ""
 
         return result
 
@@ -734,6 +815,11 @@ class PdxAnimJoint():
 
         return result
 
+    def get_gfx_data(self):
+        result = ""
+
+        return result
+
 class PdxAnimSamples:
     def __init__(self):
         self.t = []
@@ -771,6 +857,11 @@ class PdxAnimSamples:
 
         return result
 
+    def get_gfx_data(self):
+        result = ""
+
+        return result
+
 # Temporary objects
 class PdxObject():
     """Temporary class to hold the Values of a parsed Object until it gets mapped to the object"""
@@ -782,6 +873,11 @@ class PdxObject():
     def get_binary_data(self):
         return bytearray()
 
+    def get_gfx_data(self):
+        result = ""
+
+        return result
+
 class PdxProperty():
     """Temporary class to hold the Values of a parsed Property until it gets mapped to the object"""
     def __init__(self, name, bounds):
@@ -791,3 +887,8 @@ class PdxProperty():
 
     def get_binary_data(self):
         return bytearray()
+
+    def get_gfx_data(self):
+        result = ""
+
+        return result

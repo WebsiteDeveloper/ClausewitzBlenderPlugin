@@ -3,6 +3,7 @@ import os
 import io
 import math
 import mathutils
+import re
 
 import bpy
 import bmesh
@@ -13,6 +14,9 @@ class PdxFileExporter:
     """File Exporter Class"""
     def __init__(self, filename):
         self.filename = filename
+
+        m = re.search("[^/\\\\]+$", filename)
+        self.filenameNoPath = m.group(0)
 
     def get_skinning_data(self, obj, bone_ids):
         utils.Log.info("Getting Skin Data...")
@@ -103,7 +107,10 @@ class PdxFileExporter:
             #Caluculate UV Vector
             for loop in loops:
                 if loop.vert == v:
-                    uv = loop[self.uv_active].uv.copy()
+                    try:
+                        uv = loop[self.uv_active].uv.copy()
+                    except AttributeError:
+                        uv = [0,0]
                     uv[1] = 1 - uv[1]
 
             #Round Values (because of the compare)
@@ -263,8 +270,10 @@ class PdxFileExporter:
             #Setting Materials (Not very importing, because it's overridenn in .gfx file)
             result_mesh.material.shader = "PdxMeshShip"
             result_mesh.material.diff = diff_file
-            result_mesh.material.spec = diff_file.replace("diff", "spec")
-            result_mesh.material.normal = diff_file.replace("diff", "normal")
+            #result_mesh.material.normal = diff_file.replace(".dds", "_normal.dds")
+            #result_mesh.material.spec = diff_file.replace(".dds", "_spec.dds")
+            result_mesh.material.normal = "nonormal.dds"
+            result_mesh.material.spec = "nospec.dds"
 
             #Adding Mesh to List
             result_meshes.append(result_mesh)
@@ -288,6 +297,8 @@ class PdxFileExporter:
         pdxWorld = pdx_data.PdxWorld()
 
         for obj in bpy.data.objects:
+            #obj.transform_apply(location=False, rotation=True, scale=False)
+
             self.transform_mat = obj.matrix_world * self.mat_rot
             if obj.type == "MESH":
                 if obj.select and obj.parent is None:
@@ -349,11 +360,22 @@ class PdxFileExporter:
         if len(pdxLocators.locators) > 0:
             pdxObjects.append(pdxLocators)
 
-        result_file = io.open(self.filename, 'w+b')
+        mesh_file = io.open(self.filename, 'w+b')
+        gfx_file = io.open(self.filename.replace(".mesh", ".gfx"), 'w')
 
-        result_file.write(b'@@b@')
+        mesh_file.write(b'@@b@')
+        gfx_file.write("objectTypes = {\n");
+        gfx_file.write("    pdxmesh = {\n");
+        gfx_file.write("        name = \"" + self.filenameNoPath.replace(".", "_") + "\"\n")
+        gfx_file.write("        file = \"" + self.filenameNoPath + "\"\n")
+        gfx_file.write("        scale = 1\n")
 
         for i in range(len(pdxObjects)):
-            result_file.write(pdxObjects[i].get_binary_data())
+            mesh_file.write(pdxObjects[i].get_binary_data())
+            gfx_file.write(pdxObjects[i].get_gfx_data())
 
-        result_file.close()
+        gfx_file.write("    }\n");
+        gfx_file.write("}\n");
+
+        mesh_file.close()
+        gfx_file.close()
