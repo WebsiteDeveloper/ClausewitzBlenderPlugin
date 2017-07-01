@@ -35,22 +35,20 @@ class ClausewitzMeshExporter(Operator, ExportHelper):
         maxlen=255,  # Max internal buffer length, longer would be clamped.
     )
 
-    include_Locators = BoolProperty(
-        name="Include Locators",
-        description="If unchecked Locators will be put into .asset instead, if .asset is getting created. [WIP]",
-        default=True,
-    )
-
+    #export_asset = BoolProperty(
+    #    name="Add .asset File [WIP]",
+    #    description="Exports an additional .asset file besides the exported mesh. [WIP]",
+    #    default=False,
+    #)
+    #include_Locators = BoolProperty(
+    #    name="Include Locators",
+    #    description="If unchecked Locators will be put into .asset instead, if .asset is getting created. [WIP]",
+    #    default=True,
+    #)
     export_gfx = BoolProperty(
         name="Add .gfx File",
         description="Exports an additional .gfx file besides the exported mesh.",
         default=True,
-    )
-
-    export_asset = BoolProperty(
-        name="Add .asset File [WIP]",
-        description="Exports an additional .asset file besides the exported mesh. [WIP]",
-        default=False,
     )
 
     apply_Location = BoolProperty(
@@ -68,6 +66,34 @@ class ClausewitzMeshExporter(Operator, ExportHelper):
         description="Apply Size",
         default=False,
     )
+
+    rounding_position = IntProperty(
+        name = "Rounding Position",
+        description = "Position after Comma at wich the Values are rounded. Smaller Value creates smaller mesh but can remove details from the model.",
+        default = 3,
+        min=1,  soft_min=1,
+        max=8, soft_max=8,
+    )
+    export_Tangent = BoolProperty(
+        name="Include Tangents",
+        description="If checked ,Tangents are calculated, wich are needed for some shaders. May cause Problems.",
+        default=False,
+    )
+
+    def draw(self, context):
+        layout = self.layout
+
+        layout.prop(self, 'export_gfx')
+
+        compression_Box = layout.box()
+        compression_Box.label(text="Compression")
+        compression_Box.prop(self, 'rounding_position')
+        compression_Box.prop(self, 'export_Tangent')
+
+        layout.prop(self, 'apply_Location')
+        layout.prop(self, 'apply_rotation')
+        layout.prop(self, 'apply_size')
+
 
     def execute(self, context):
         pdx = exporter.PdxFileExporter(self.filepath)

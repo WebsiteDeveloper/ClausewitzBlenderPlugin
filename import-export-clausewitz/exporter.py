@@ -144,10 +144,10 @@ class PdxFileExporter:
 
             #Round Values (because of the compare)
             for i in range(2):
-                uv[i] = round(uv[i], 6)
+                uv[i] = round(uv[i], self.exporter.rounding_position)
             for i in range(3):
-                vert[i] = round(vert[i], 6)
-                normal[i] = round(normal[i], 6)
+                vert[i] = round(vert[i], self.exporter.rounding_position)
+                normal[i] = round(normal[i], self.exporter.rounding_position)
 
             #Freezing the vectors so they can be hashed
             vert.freeze()
@@ -166,7 +166,13 @@ class PdxFileExporter:
             utils.Log.critical("Face has " + str(len(indices)) + " vertices! (Not Triangulated)")
             return
 
-        tangent = self.get_Tangent(verts, uv_coords)
+        if self.exporter.export_Tangent:
+            tangent = self.get_Tangent(verts, uv_coords)
+        else:
+            tangent = mathutils.Vector((0,1,0,1))
+
+        for i in range(4):
+            tangent[i] = round(tangent[i], self.exporter.rounding_position)
 
         tangent.freeze()
         utils.Log.debug("Tangent: " + str(tangent))
@@ -324,6 +330,7 @@ class PdxFileExporter:
         return result_meshes
 
     def export_mesh(self, exporter):
+        self.exporter = exporter
         bpy.ops.object.transform_apply(location=exporter.apply_Location, rotation=exporter.apply_rotation, scale=exporter.apply_size)
         #Rotation Matrix to Transform from Y-Up Space to Z-Up Space
         self.mat_mirror = mathutils.Matrix.Scale(-1, 4, (1,0,0))
