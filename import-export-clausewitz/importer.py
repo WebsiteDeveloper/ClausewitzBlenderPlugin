@@ -22,6 +22,9 @@ class PdxFileImporter:
         mat_rot = mathutils.Matrix.Rotation(math.radians(-90.0), 4, 'X')
         mat_rot *= mathutils.Matrix.Scale(-1, 4, (1,0,0))
 
+        mat_rot_inverse = mat_rot.copy()
+        mat_rot_inverse.invert()
+
         for node in self.file.nodes:
             if isinstance(node, pdx_data.PdxAsset):
                 utils.Log.info("Importer: PDXAsset")
@@ -111,6 +114,7 @@ class PdxFileImporter:
                                 sub_object.select = True
 
                                 sub_mesh.from_pydata(meshData.verts, [], meshData.faces)
+                                #sub_mesh.normals_split_custom_set_from_vertices(meshData.normals)
 
                                 if skeletonPresent:
                                     for name in boneNames:
@@ -136,7 +140,9 @@ class PdxFileImporter:
 
                                 for vert in bm.verts:
                                     vert.co = vert.co * mat_rot
+                                    vert.normal = vert.normal * mat_rot_inverse
 
+                                bm.normal_update()
                                 bm.verts.ensure_lookup_table()
                                 bm.verts.index_update()
                                 bm.faces.index_update()

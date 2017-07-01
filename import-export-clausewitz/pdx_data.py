@@ -161,19 +161,19 @@ class PdxFile():
 
                 for p in object_properties:
                     if p.name == "p":
-                        #utils.Log.info("Positions: " + str(len(p.value)) + " representing " + str(len(p.value) / 3) + " Vertices")
+                        utils.Log.info("Positions: " + str(len(p.value)) + " representing " + str(len(p.value) / 3) + " Vertices")
                         result.verts = utils.TransposeCoordinateArray3D(p.value)
                     elif p.name == "n":
-                        #utils.Log.info("Normals: " + str(len(p.value)) + " representing " + str(len(p.value) / 3) + " Vertices")
+                        utils.Log.info("Normals: " + str(len(p.value)) + " representing " + str(len(p.value) / 3) + " Vertices")
                         result.normals = utils.TransposeCoordinateArray3D(p.value)
                     elif p.name == "ta":
-                        #utils.Log.info("Tangents: " + str(len(p.value)) + " representing " + str(len(p.value) / 4) + " Vertices")
+                        utils.Log.info("Tangents: " + str(len(p.value)) + " representing " + str(len(p.value) / 4) + " Vertices")
                         result.tangents = p.value
                     elif p.name == "u0": # u1, u2, u3 still not implemented
-                        #utils.Log.info("UV's: " + str(len(p.value)) + " representing " + str(len(p.value) / 2) + " Vertices")
+                        utils.Log.info("UV's: " + str(len(p.value)) + " representing " + str(len(p.value) / 2) + " Vertices")
                         result.uv_coords = utils.TransposeCoordinateArray2D(p.value)
                     elif p.name == "tri":
-                        #utils.Log.info("Indices: " + str(len(p.value)) + " representing " + str(len(p.value) / 3) + " Triangles")
+                        utils.Log.info("Indices: " + str(len(p.value)) + " representing " + str(len(p.value) / 3) + " Triangles")
                         result.faces = utils.TransposeCoordinateArray3D(p.value)
                     else:
                         utils.Log.info("ERROR ::: Invalid Property in Mesh: \"" + p.name + "\"")
@@ -646,7 +646,7 @@ class PdxMaterial():
         result += "            texture_diffuse = \"" + self.diff + "\"\n"
         result += "            texture_normal = \"" + self.normal + "\"\n"
         result += "            texture_specular = \"" + self.spec + "\"\n"
-        result += "            texture_specular = \"" + self.shader + "\"\n"
+        result += "            shader = \"" + self.shader + "\"\n"
 
         return result
 

@@ -81,10 +81,41 @@ class PdxFileExporter:
 
         return skin
 
+    def get_Tangent(self, verts, uv_coords):
+        A = verts[0]
+        B = verts[1]
+        C = verts[2]
+
+        p1 = B - A;
+        p2 = C - A;
+
+        stA = uv_coords[0]
+        stB = uv_coords[1]
+        stC = uv_coords[2]
+        
+        st1 = stB - stA;
+        st2 = stC - stA;
+
+        rx = (st1.x * st2.y - st1.y * st2.x)
+        if rx == 0:
+            #For Point UV's
+            return mathutils.Vector((0, 1, 0, 1))
+
+        r = 1.0 / rx;
+        tangent = (p1 * st2.y - p2 * st1.y) * r;
+        #biTangent = (p1 * st2.x - p2 * st1.x) * r;
+
+        tangent.normalize()
+        #biTangent.normalize()
+
+        return tangent.to_4d()#, biTangent
+
     #Exports one face into the global arrays
     def handle_BMesh_Face(self, face):
         #Indices of the Face
-        indices = []
+        verts = []
+        normals = []
+        uv_coords = []
 
         for v in face.verts:
             #Calculate Vertex Position
@@ -93,16 +124,11 @@ class PdxFileExporter:
             # TODO Auto Edge Split on sharp Edges (For now in workflow before Export)
             #Caluculate Normal Vector (Depending on Face smoothness)
             if face.smooth:
-                normal = v.normal * self.mat_rot
+                normal = v.normal * self.transform_mat_inverse
             else:
-                normal = face.normal * self.mat_rot
+                normal = face.normal * self.transform_mat_inverse
+            normal = -(normal * self.mat_mirror) # Temporary Fix
             normal.normalize()
-
-            #Caluculate Tangent Vector
-            if len(v.link_faces) == 0:
-                print("Skip")
-                return
-            tangent = v.link_faces[0].calc_tangent_vert_diagonal().to_4d() * self.mat_rot
 
             #Getting all UV Layers
             loops = face.loops
@@ -122,21 +148,34 @@ class PdxFileExporter:
             for i in range(3):
                 vert[i] = round(vert[i], 6)
                 normal[i] = round(normal[i], 6)
-            for i in range(4):
-                tangent[i] = round(tangent[i], 6)
 
             #Freezing the vectors so they can be hashed
             vert.freeze()
             utils.Log.debug("Vert: " + str(vert))
             normal.freeze()
             utils.Log.debug("Normal: " + str(normal))
-            tangent.freeze()
-            utils.Log.debug("Tangent: " + str(tangent))
             uv.freeze()
             utils.Log.debug("UV: " + str(uv))
 
+            verts.append(vert)
+            normals.append(normal)
+            uv_coords.append(uv)
+        
+        if len(verts) != 3 or len(normals) != 3 or len(uv_coords) != 3:
+            #TODO Auto-Triangulation (Recursive Algorithm or Just apply the Blender one)
+            utils.Log.critical("Face has " + str(len(indices)) + " vertices! (Not Triangulated)")
+            return
+
+        tangent = self.get_Tangent(verts, uv_coords)
+
+        tangent.freeze()
+        utils.Log.debug("Tangent: " + str(tangent))
+
+        indices = []
+
+        for i in range(3):
             #Reading old Vertex-Index from indexMap
-            oldIndex = self.indexMap.get((vert,normal,tangent,uv))
+            oldIndex = self.indexMap.get((verts[i],normals[i],uv_coords[i],tangent))
 
             #Checking if Vertex already exists
             if oldIndex is not None:
@@ -151,20 +190,16 @@ class PdxFileExporter:
 
                 indices.append(index)
 
-                self.verts.append(vert)
-                self.normals.append(normal)
+                self.verts.append(verts[i])
+                self.normals.append(normals[i])
+                self.uv_coords.append(uv_coords[i])
                 self.tangents.append(tangent)
-                self.uv_coords.append(uv)
 
                 #Needed for Speed
-                self.indexMap[(vert,normal,tangent,uv)] = index
+                self.indexMap[(verts[i],normals[i],uv_coords[i],tangent)] = index
 
-        #Face should be Triangulated, but if not it ignores the face and continues
-        if len(indices) == 3:
-            self.faces.append((indices[0], indices[1], indices[2]))
-        else:
-            #TODO Auto-Triangulation (Recursive Algorithm)
-            utils.Log.critical("Face has " + str(len(indices)) + " vertices! (Not Triangulated)")
+        #Setting Face
+        self.faces.append((indices[2], indices[1], indices[0]))
 
     #Exports one BMesh into X PdxMeshes (Splitted on Material and Size)
     def splitMeshes(self, obj, boneIDs=None):
@@ -291,8 +326,8 @@ class PdxFileExporter:
     def export_mesh(self, exporter):
         bpy.ops.object.transform_apply(location=exporter.apply_Location, rotation=exporter.apply_rotation, scale=exporter.apply_size)
         #Rotation Matrix to Transform from Y-Up Space to Z-Up Space
+        self.mat_mirror = mathutils.Matrix.Scale(-1, 4, (1,0,0))
         self.mat_rot = mathutils.Matrix.Rotation(math.radians(90.0), 4, 'X')
-        self.mat_rot *= mathutils.Matrix.Scale(-1, 4, (1,0,0))
 
         pdxObjects = []
         pdxObjects.append(pdx_data.PdxAsset())
@@ -301,8 +336,14 @@ class PdxFileExporter:
         pdxWorld = pdx_data.PdxWorld()
 
         for obj in bpy.data.objects:
+            self.transform_mat = obj.matrix_world * self.mat_mirror * self.mat_rot
 
-            self.transform_mat = obj.matrix_world * self.mat_rot
+            self.transform_mat_inverse = self.transform_mat.copy()
+            self.transform_mat_inverse.invert()
+
+            #self.transform_mat = self.mat_mirror * self.transform_mat
+            #sself.transform_mat_inverse = self.mat_mirror * self.transform_mat_inverse
+
             if obj.type == "MESH":
                 if obj.select and obj.parent is None:
                         pdxShape = pdx_data.PdxShape(obj.name)
