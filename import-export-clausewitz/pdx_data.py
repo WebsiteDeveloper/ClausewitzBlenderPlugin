@@ -348,6 +348,7 @@ class PdxFile():
                         elif p.name == "tx":
                             if len(p.value) == 12:
                                 result.transform = p.value
+                                print(p.value[9:12])
                             else:
                                 utils.Log.info("ERROR ::: Joint Transform not 12 Values")
                         else:

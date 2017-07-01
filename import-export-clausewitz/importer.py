@@ -17,13 +17,14 @@ class PdxFileImporter:
         self.file = pdx_data.PdxFile(filename)
         self.file.read()
 
+        self.mat_rot = mathutils.Matrix.Rotation(math.radians(-90.0), 4, 'X')
+        self.mat_rot *= mathutils.Matrix.Scale(-1, 4, (1,0,0))
+
+        self.mat_rot_inverse = self.mat_rot.copy()
+        self.mat_rot_inverse.invert()
+
     def import_mesh(self):
         #Rotation Matrix to Transform from Y-Up Space to Z-Up Space
-        mat_rot = mathutils.Matrix.Rotation(math.radians(-90.0), 4, 'X')
-        mat_rot *= mathutils.Matrix.Scale(-1, 4, (1,0,0))
-
-        mat_rot_inverse = mat_rot.copy()
-        mat_rot_inverse.invert()
 
         for node in self.file.nodes:
             if isinstance(node, pdx_data.PdxAsset):
@@ -70,8 +71,6 @@ class PdxFileImporter:
                                 transformationMatrix[2][0:4] = joint.transform[2], joint.transform[5], joint.transform[8], joint.transform[11]
                                 transformationMatrix[3][0:4] = 0, 0, 0, 1
 
-                                #utils.Log.info(transformationMatrix.decompose())
-
                                 if joint.parent >= 0:
                                     utils.Log.info("Joint: " + joint.name)
                                     parent = amt.edit_bones[boneNames[joint.parent]] 
@@ -86,10 +85,11 @@ class PdxFileImporter:
                                 mat_temp = components[1].to_matrix()
                                 mat_temp.resize_4x4()
 
-                                bone.tail = -components[0] * mat_temp * mat_rot
+                                bone.tail = -components[0] * mat_temp * self.mat_rot
 
-                                if (bone.head - bone.tail).length < 0.001:
-                                    bone.tail = bone.tail + mathutils.Vector((0, 0, 0.001))
+
+                                if (bone.head - bone.tail).length < 0.001 and joint.parent > -1: 
+                                    bone.tail = bone.tail + mathutils.Vector((0, 0, 1e-4)) 
 
                             bpy.ops.object.mode_set(mode='OBJECT')
 
@@ -139,8 +139,8 @@ class PdxFileImporter:
                                 bm.from_mesh(sub_mesh)
 
                                 for vert in bm.verts:
-                                    vert.co = vert.co * mat_rot
-                                    vert.normal = vert.normal * mat_rot_inverse
+                                    vert.co = vert.co * self.mat_rot
+                                    vert.normal = vert.normal * self.mat_rot_inverse
 
                                 bm.normal_update()
                                 bm.verts.ensure_lookup_table()
@@ -215,7 +215,7 @@ class PdxFileImporter:
                     obj.parent = parent_locator
                     obj.empty_draw_size = 2
                     obj.empty_draw_type = 'SINGLE_ARROW'
-                    obj.location = mathutils.Vector((locator.pos[0], locator.pos[1], locator.pos[2])) * mat_rot
+                    obj.location = mathutils.Vector((locator.pos[0], locator.pos[1], locator.pos[2])) * self.mat_rot
                     obj.rotation_mode = 'QUATERNION'
                     obj.rotation_quaternion = locator.quaternion
                     obj.rotation_mode = 'XYZ'
@@ -229,10 +229,6 @@ class PdxFileImporter:
                 utils.Log.info("ERROR ::: Invalid node found: " + str(node))
 
     def import_anim(self):
-        eul = mathutils.Euler((0.0, 0.0, math.radians(180.0)), 'XYZ')
-        eul2 = mathutils.Euler((math.radians(90.0), 0.0, 0.0), 'XYZ')
-        mat_rot = eul.to_matrix() * eul2.to_matrix()
-        mat_rot.resize_4x4()
         scn = bpy.context.scene
 
         tJoints = []
@@ -288,26 +284,20 @@ class PdxFileImporter:
             for i in range(len(qJoints)):
                 qJoint = qJoints[i]
                 bone = armature.pose.bones[qJoint.name]
+                bone.rotation_mode = 'QUATERNION'
                 for f in range(scn.frame_end):
-                    vec = mathutils.Vector((samples.q[(f * len(qJoints) + i) * 4 + 0], samples.q[(f * len(qJoints) + i) * 4 + 1], samples.q[(f * len(qJoints) + i) * 4 + 2], samples.q[(f * len(qJoints) + i) * 4 + 3]))
-                    q = vec - mathutils.Vector(qJoint.quaternion)
+                    q = mathutils.Vector((samples.q[(f * len(qJoints) + i) * 4 + 0], samples.q[(f * len(qJoints) + i) * 4 + 1], samples.q[(f * len(qJoints) + i) * 4 + 2], samples.q[(f * len(qJoints) + i) * 4 + 3]))
 
-                    if qJoint.name == "tail_1":
-                        utils.Log.info(str(q))
-
-                    bone.rotation_mode = 'QUATERNION'
-                    bone.rotation_quaternion = q
-                    bone.rotation_mode = 'XYZ'
+                    bone.rotation_quaternion = q * self.mat_rot
                     bone.keyframe_insert(data_path="rotation_quaternion" ,frame=f+1)
 
             for i in range(len(tJoints)):
                 tJoint = tJoints[i]
                 bone = armature.pose.bones[tJoint.name]
                 for f in range(scn.frame_end):
-                    vec = mathutils.Vector((samples.t[(f * len(tJoints) + i) * 3 + 0], samples.t[(f * len(tJoints) + i) * 3 + 1], samples.t[(f * len(tJoints) + i) * 3 + 2]))
-                    t = (vec - mathutils.Vector(tJoint.translation))
-
-                    bone.location = t
+                    v = mathutils.Vector((samples.t[(f * len(tJoints) + i) * 3 + 0], samples.t[(f * len(tJoints) + i) * 3 + 1], samples.t[(f * len(tJoints) + i) * 3 + 2]))
+                    print(v)
+                    bone.location = v * self.mat_rot
                     bone.keyframe_insert(data_path="location" ,frame=f+1)
 
             bpy.ops.object.mode_set(mode='OBJECT')

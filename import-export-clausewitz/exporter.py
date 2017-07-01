@@ -42,17 +42,6 @@ class PdxFileExporter:
 
         return {'blender_skin': blender_skin, 'bones_per_vertex': bones_per_vertex}
 
-    def get_material_list(self, obj):
-        materials = {}
-
-        utils.Log.info("Collecting Materials...")
-        for mat_slot in obj.material_slots:
-            material = mat_slot.material
-            if material is not None:
-                materials[len(materials)] = material.name
-        
-        return materials
-
     def get_Skin(self, skin_data):
         skin = None
 
@@ -80,6 +69,17 @@ class PdxFileExporter:
             utils.Log.debug(len(skin.weight))
 
         return skin
+
+    def get_material_list(self, obj):
+        materials = {}
+
+        utils.Log.info("Collecting Materials...")
+        for mat_slot in obj.material_slots:
+            material = mat_slot.material
+            if material is not None:
+                materials[len(materials)] = material.name
+        
+        return materials
 
     def get_Tangent(self, verts, uv_coords):
         A = verts[0]
@@ -365,8 +365,13 @@ class PdxFileExporter:
 
                     for i in range(len(obj.data.bones)):
                         bone = obj.data.bones[i]
-                        boneIDs[bone.name] = i
-                            
+                        boneIDs[bone.name] = i + 1
+
+                    pdxRootJoint = pdx_data.PdxJoint("root")
+                    pdxRootJoint.index = 0
+                    pdxRootJoint.transform = [ 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0 ]
+                    pdxSkeleton.joints.append(pdxRootJoint)
+
                     for i in range(len(obj.data.bones)):
                         bone = obj.data.bones[i]
                         utils.Log.info("Joint: " + bone.name)
@@ -378,9 +383,18 @@ class PdxFileExporter:
                             utils.Log.info("Parent ID: " + str(boneIDs[bone.parent.name]))
                             pdxJoint.parent = boneIDs[bone.parent.name]
                         else:
-                            utils.Log.info("Root Bone")
+                            utils.Log.info("Parent: root")
+                            utils.Log.info("Parent ID: 0")
+                            pdxJoint.parent = 0
 
-                        pdxJoint.transform = bone.matrix_local[:12]
+                        p = bone.tail_local * self.transform_mat
+                        pdxJoint.transform = [
+                            1, 0, 0,
+                            0, 1, 0,
+                            0, 0, 1,
+                            -p[0], -p[1], -p[2]
+                        ]
+                        print(bone.name + ": " + str(pdxJoint.transform[9:12]))
                         #pdxJoint.transform = [1, 0, 0, 0, 1, 0, 0, 0, 1, bone.tail[0], bone.tail[1], bone.tail[2]]
 
                         pdxSkeleton.joints.append(pdxJoint)
