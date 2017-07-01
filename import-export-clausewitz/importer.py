@@ -63,33 +63,44 @@ class PdxFileImporter:
                             bpy.ops.object.mode_set(mode='EDIT')
 
                             for joint in shape.skeleton.joints:
+                                #Head of the Bone is the PdxJoint.
+                                #Tail only goes to next Bone
                                 bone = amt.edit_bones.new(joint.name)
 
+                                #Transformation Matrix
                                 transformationMatrix = mathutils.Matrix()
-                                transformationMatrix[0][0:4] = joint.transform[0], joint.transform[3], joint.transform[6], joint.transform[9]
-                                transformationMatrix[1][0:4] = joint.transform[1], joint.transform[4], joint.transform[7], joint.transform[10]
-                                transformationMatrix[2][0:4] = joint.transform[2], joint.transform[5], joint.transform[8], joint.transform[11]
+                                transformationMatrix[0][0:4] = joint.transform[0], joint.transform[3], joint.transform[6], 0
+                                transformationMatrix[1][0:4] = joint.transform[1], joint.transform[4], joint.transform[7], 0
+                                transformationMatrix[2][0:4] = joint.transform[2], joint.transform[5], joint.transform[8], 0
                                 transformationMatrix[3][0:4] = 0, 0, 0, 1
 
+                                #Position with applied Rotation and Scaling
+                                joint_position = mathutils.Vector((joint.transform[9], joint.transform[10], joint.transform[11], 1))
+                                joint_position = joint_position * transformationMatrix
+
+                                #Apply Postion to Bone
+                                bone.head = joint_position[0:3]
+
+                                #Applying Default Position for tail
+                                p = joint_position + mathutils.Vector((0, 0, 0.5, 1))
+                                bone.tail = p[0:3]
+
                                 if joint.parent >= 0:
-                                    utils.Log.info("Joint: " + joint.name)
-                                    parent = amt.edit_bones[boneNames[joint.parent]] 
+                                    #Does have a Parent
+
+                                    #Setting Parent
+                                    parent = amt.edit_bones[boneNames[joint.parent]]
                                     bone.parent = parent
-                                    bone.head = parent.tail
-                                else:          
-                                    bone.head = (0,0,0)
 
-                                temp_transform = transformationMatrix #.inverted()
-                                components = temp_transform.decompose()
+                                    #Only set for visibility reasons. Not actually neccesary
+                                    parent.tail = joint_position[0:3]
 
-                                mat_temp = components[1].to_matrix()
-                                mat_temp.resize_4x4()
-
-                                bone.tail = -components[0] * mat_temp * self.mat_rot
-
-
-                                if (bone.head - bone.tail).length < 0.001 and joint.parent > -1: 
-                                    bone.tail = bone.tail + mathutils.Vector((0, 0, 1e-4)) 
+                                    if (parent.tail - parent.head).length < 1e-4:
+                                        #Offsetting by Epsilon if overlaying Joints exist
+                                        #Blender is stupid
+                                        p = joint_position + mathutils.Vector((0, 0, 1e-4, 1))
+                                        bone.head = p[0:3]
+                                        parent.tail = p[0:3]
 
                             bpy.ops.object.mode_set(mode='OBJECT')
 
