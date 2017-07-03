@@ -17,6 +17,8 @@ class PdxFileImporter:
         self.file = pdx_data.PdxFile(filename)
         self.file.read()
 
+        self.mat_rot_simple = mathutils.Matrix.Rotation(math.radians(-90.0), 4, 'X')
+
         self.mat_rot = mathutils.Matrix.Rotation(math.radians(-90.0), 4, 'X')
         self.mat_rot *= mathutils.Matrix.Scale(-1, 4, (1,0,0))
 
@@ -56,7 +58,6 @@ class PdxFileImporter:
                             scn.objects.active = obj
                             obj.select = True
 
-
                             for joint in shape.skeleton.joints:
                                 boneNames[joint.index] = joint.name
 
@@ -75,14 +76,16 @@ class PdxFileImporter:
                                 transformationMatrix[3][0:4] = 0, 0, 0, 1
 
                                 #Position with applied Rotation and Scaling
-                                joint_position = mathutils.Vector((joint.transform[9], joint.transform[10], joint.transform[11], 1))
-                                joint_position = joint_position * transformationMatrix
+                                joint_position = -mathutils.Vector((joint.transform[9], joint.transform[10], joint.transform[11], 1))
+                                joint_position = joint_position * transformationMatrix * self.mat_rot
+
+                                print(joint_position)
 
                                 #Apply Postion to Bone
                                 bone.head = joint_position[0:3]
 
                                 #Applying Default Position for tail
-                                p = joint_position + mathutils.Vector((0, 0, 0.5, 1))
+                                p = joint_position + mathutils.Vector((0, 0.1, 0, 1)) * transformationMatrix * self.mat_rot
                                 bone.tail = p[0:3]
 
                                 if joint.parent >= 0:
@@ -91,16 +94,6 @@ class PdxFileImporter:
                                     #Setting Parent
                                     parent = amt.edit_bones[boneNames[joint.parent]]
                                     bone.parent = parent
-
-                                    #Only set for visibility reasons. Not actually neccesary
-                                    parent.tail = joint_position[0:3]
-
-                                    if (parent.tail - parent.head).length < 1e-4:
-                                        #Offsetting by Epsilon if overlaying Joints exist
-                                        #Blender is stupid
-                                        p = joint_position + mathutils.Vector((0, 0, 1e-4, 1))
-                                        bone.head = p[0:3]
-                                        parent.tail = p[0:3]
 
                             bpy.ops.object.mode_set(mode='OBJECT')
 
@@ -239,21 +232,30 @@ class PdxFileImporter:
             else:
                 utils.Log.info("ERROR ::: Invalid node found: " + str(node))
 
+    def getRecursiveBoneMatrix(self, bone):
+        if bone.parent is None:
+            return bone.matrix.copy()
+        else:
+            parent_inv = bone.parent.matrix.copy()
+            parent_inv.invert()
+
+            return bone.matrix.copy() * parent_inv
+
     def import_anim(self):
         scn = bpy.context.scene
 
         tJoints = []
         qJoints = []
         sJoints = []
+        joints = []
         samples = None
 
         armature = None
 
         for obj in bpy.data.objects:
-            if obj.type == "ARMATURE":
-                if obj.parent is None:
-                    armature = obj
-                    break
+            if obj.type == "ARMATURE" and obj.select:
+                armature = obj
+                break
 
         for node in self.file.nodes:
             if isinstance(node, pdx_data.PdxAsset):
@@ -270,6 +272,7 @@ class PdxFileImporter:
 
                 for joint in node.animJoints:
                     utils.Log.info("Mode: " + joint.sampleMode)
+                    joints.append(joint)
                     if "t" in joint.sampleMode:
                         utils.Log.info("T")
                         tJoints.append(joint)
@@ -292,24 +295,54 @@ class PdxFileImporter:
             bpy.context.scene.objects.active = armature
             bpy.ops.object.mode_set(mode='POSE')
 
-            for i in range(len(qJoints)):
-                qJoint = qJoints[i]
-                bone = armature.pose.bones[qJoint.name]
+            for joint in joints:
+                print(joint.name)
+                bone = armature.pose.bones[joint.name]
                 bone.rotation_mode = 'QUATERNION'
-                for f in range(scn.frame_end):
-                    q = mathutils.Vector((samples.q[(f * len(qJoints) + i) * 4 + 0], samples.q[(f * len(qJoints) + i) * 4 + 1], samples.q[(f * len(qJoints) + i) * 4 + 2], samples.q[(f * len(qJoints) + i) * 4 + 3]))
 
-                    bone.rotation_quaternion = q * self.mat_rot
-                    bone.keyframe_insert(data_path="rotation_quaternion" ,frame=f+1)
+                bonematrix = self.getRecursiveBoneMatrix(bone)
+                print("\nRAW:")
+                print(bone.matrix)
+                print("\nCalculated:")
+                print(bonematrix)
+                bonematrix.invert()
 
-            for i in range(len(tJoints)):
-                tJoint = tJoints[i]
-                bone = armature.pose.bones[tJoint.name]
-                for f in range(scn.frame_end):
-                    v = mathutils.Vector((samples.t[(f * len(tJoints) + i) * 3 + 0], samples.t[(f * len(tJoints) + i) * 3 + 1], samples.t[(f * len(tJoints) + i) * 3 + 2]))
-                    print(v)
-                    bone.location = v * self.mat_rot
-                    bone.keyframe_insert(data_path="location" ,frame=f+1)
+                print("\nT:")
+                t = mathutils.Vector((joint.translation[0], joint.translation[1], joint.translation[2], 1))
+                print(t * self.mat_rot)
+                bone.location = (bonematrix * (t * self.mat_rot)).to_3d()
+                print(bone.location)
+                #if joint in tJoints:
+                #    i = tJoints.index(joint)
+                #    for f in range(scn.frame_end):
+                #        t = mathutils.Vector((samples.t[(f * len(tJoints) + i) * 3 + 0], samples.t[(f * len(tJoints) + i) * 3 + 1], samples.t[(f * len(tJoints) + i) * 3 + 2], 1))
+                #        bone.location = (bonematrix * (t * self.mat_rot)).to_3d()
+                #        bone.keyframe_insert(data_path="location", frame=f+1)
+
+                #print("\nQ:")
+                #q = mathutils.Quaternion((joint.quaternion[3], joint.quaternion[0], joint.quaternion[1], joint.quaternion[2]))
+                #print(q)
+                #print((q.to_matrix().to_4x4() * self.mat_rot).to_quaternion())
+                #bone.rotation_quaternion = (bonematrix * (q.to_matrix().to_4x4() * self.mat_rot)).to_quaternion()
+                #print(bone.rotation_quaternion)
+                #if joint in qJoints:
+                #    i = qJoints.index(joint)
+                #    for f in range(scn.frame_end):
+                #        q = mathutils.Vector((samples.q[(f * len(qJoints) + i) * 4 + 3], samples.q[(f * len(qJoints) + i) * 4 + 0], samples.q[(f * len(qJoints) + i) * 4 + 1], samples.q[(f * len(qJoints) + i) * 4 + 2]))
+                #        bone.rotation_quaternion = bonematrix * (q * self.mat_rot)
+                #        bone.keyframe_insert(data_path="rotation_quaternion", frame=f+1)
+                
+                #print("\nS:")
+                #s = mathutils.Vector((joint.size, joint.size, joint.size, 0))
+                #print(s * self.mat_rot)
+                #bone.scale = (bonematrix * (s * self.mat_rot)).to_3d()
+                #print(bone.scale)
+                #if joint in sJoints:
+                #    i = sJoints.index(joint)
+                #    for f in range(scn.frame_end):
+                #        s = mathutils.Vector((samples.s[f * len(qJoints) + i], samples.s[f * len(qJoints) + i], samples.s[f * len(qJoints) + i], 0))
+                #        bone.scale = (bonematrix * (s * self.mat_rot)).to_3d()
+                #        bone.keyframe_insert(data_path="scale", frame=f+1)
 
             bpy.ops.object.mode_set(mode='OBJECT')
         else:
