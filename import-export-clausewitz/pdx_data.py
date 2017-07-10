@@ -30,7 +30,7 @@ class PdxFile():
             elif char == "[":
                 self.nodes.append(self.read_object(buffer, 0, None))
 
-        print("Parsed")
+        utils.Log.info("Parsed")
 
         self.__file_reference__.close()
 
@@ -46,36 +46,34 @@ class PdxFile():
         for i in range(name_length):
             name += buffer.NextChar()
 
-        #name = utils.TranslatePropertyName(name) Umbenennen verwirrt nur!
-        #print("Property: " + name)
+        utils.Log.info("Property: " + name)
 
         char = buffer.NextChar()
 
         if char == "i":
             data_count = buffer.NextUInt32()
-            #print("Count: ")
+            #utils.Log.info("Count: " + str(data_count))
             for i in range(data_count):
                 temp = buffer.NextInt32()
                 property_data.append(temp)
-                #print("Integer: " + str(temp))
+                #utils.Log.info("Integer: " + str(temp))
 
             if name == "pdxasset":
-                print("PDXAsset: " + str(property_data))
+                utils.Log.info("PDXAsset: " + str(property_data))
         elif char == "f":
             data_count = buffer.NextUInt32()
-
+            #utils.Log.info("Count: " + str(data_count))
             for i in range(data_count):
                 temp = buffer.NextFloat32()
                 property_data.append(temp)
-                #if name == "min" or name == "max":
-                    #print("Float: " + str(temp))
+                #utils.Log.info("Float: " + str(temp))
         elif char == "s":
             value = ""
             stringType = buffer.NextUInt32()
             dataCount = buffer.NextUInt32()
 
             value = utils.ReadNullByteString(buffer)
-            #print("String: " + value)
+            #utils.Log.info("String: " + value)
 
             property_data = value
 
@@ -109,7 +107,7 @@ class PdxFile():
             return self.read_object(buffer, depth_temp, prev_obj)
         else:
             object_name = char + utils.ReadNullByteString(buffer)
-            print((" "*depth) + "Object Name: " + object_name)
+            utils.Log.info((" "*depth) + "Object Name: " + object_name)
 
             if object_name == "object":
                 result = PdxWorld()
@@ -144,10 +142,10 @@ class PdxFile():
                     if isinstance(o, PdxShape):
                         result.objects.append(o)
                     else:
-                        print("ERROR ::: World contains invalid Sub-Object: " + str(type(o)))
+                        utils.Log.info("ERROR ::: World contains invalid Sub-Object: " + str(type(o)))
 
                 for p in object_properties:
-                    print("ERROR ::: Invalid Property in World: \"" + p.name + "\"")
+                    utils.Log.info("ERROR ::: Invalid Property in World: \"" + p.name + "\"")
             elif object_name == "mesh":
                 result = PdxMesh()
 
@@ -159,31 +157,31 @@ class PdxFile():
                     elif isinstance(o, PdxSkin):
                         result.skin = o
                     else:
-                        print("ERROR ::: Mesh contains invalid Sub-Object: " + str(type(o)))
+                        utils.Log.info("ERROR ::: Mesh contains invalid Sub-Object: " + str(type(o)))
 
                 for p in object_properties:
                     if p.name == "p":
-                        #print("Positions: " + str(len(p.value)) + " representing " + str(len(p.value) / 3) + " Vertices")
+                        utils.Log.info("Positions: " + str(len(p.value)) + " representing " + str(len(p.value) / 3) + " Vertices")
                         result.verts = utils.TransposeCoordinateArray3D(p.value)
                     elif p.name == "n":
-                        #print("Normals: " + str(len(p.value)) + " representing " + str(len(p.value) / 3) + " Vertices")
+                        utils.Log.info("Normals: " + str(len(p.value)) + " representing " + str(len(p.value) / 3) + " Vertices")
                         result.normals = utils.TransposeCoordinateArray3D(p.value)
                     elif p.name == "ta":
-                        #print("Tangents: " + str(len(p.value)) + " representing " + str(len(p.value) / 4) + " Vertices")
+                        utils.Log.info("Tangents: " + str(len(p.value)) + " representing " + str(len(p.value) / 4) + " Vertices")
                         result.tangents = p.value
                     elif p.name == "u0": # u1, u2, u3 still not implemented
-                        #print("UV's: " + str(len(p.value)) + " representing " + str(len(p.value) / 2) + " Vertices")
+                        utils.Log.info("UV's: " + str(len(p.value)) + " representing " + str(len(p.value) / 2) + " Vertices")
                         result.uv_coords = utils.TransposeCoordinateArray2D(p.value)
                     elif p.name == "tri":
-                        #print("Indices: " + str(len(p.value)) + " representing " + str(len(p.value) / 3) + " Triangles")
+                        utils.Log.info("Indices: " + str(len(p.value)) + " representing " + str(len(p.value) / 3) + " Triangles")
                         result.faces = utils.TransposeCoordinateArray3D(p.value)
                     else:
-                        print("ERROR ::: Invalid Property in Mesh: \"" + p.name + "\"")
+                        utils.Log.info("ERROR ::: Invalid Property in Mesh: \"" + p.name + "\"")
             elif object_name == "aabb":
                 result = PdxBounds(None, None)
 
                 for o in sub_objects:
-                    print("ERROR ::: Bounds contains invalid Sub-Object: " + str(type(o)))
+                    utils.Log.info("ERROR ::: Bounds contains invalid Sub-Object: " + str(type(o)))
 
                 for p in object_properties:
                     if(p.name == "min"):
@@ -191,33 +189,33 @@ class PdxFile():
                     elif(p.name == "max"):
                         result.max = p.value
                     else:
-                        print("ERROR ::: Invalid Property in Bounds: \"" + p.name + "\"")
+                        utils.Log.info("ERROR ::: Invalid Property in Bounds: \"" + p.name + "\"")
             elif object_name == "skin":
                 result = PdxSkin()
 
                 for o in sub_objects:
-                    print("ERROR ::: Skin contains invalid Sub-Object: " + str(type(o)))
+                    utils.Log.info("ERROR ::: Skin contains invalid Sub-Object: " + str(type(o)))
 
                 for p in object_properties:
                     if p.name == "bones":
                         if len(p.value) == 1:
-                            #print("Bones per Vertice: " + str(p.value[0]))
+                            #utils.Log.info("Bones per Vertice: " + str(p.value[0]))
                             result.bonesPerVertice = p.value[0]
                         else:
-                            print("ERROR ::: Bones per Vertice has more than 1 Value")
+                            utils.Log.info("ERROR ::: Bones per Vertice has more than 1 Value")
                     elif p.name == "ix":
-                        #print("Indices: " + str(len(p.value)))
+                        #utils.Log.info("Indices: " + str(len(p.value)))
                         result.indices = p.value
                     elif p.name == "w":
-                        #print("Weights: " + str(len(p.value)))
+                        #utils.Log.info("Weights: " + str(len(p.value)))
                         result.weight = p.value
                     else:
-                        print("ERROR ::: Invalid Property in Skin: \"" + p.name + "\"")
+                        utils.Log.info("ERROR ::: Invalid Property in Skin: \"" + p.name + "\"")
             elif object_name == "material":
                 result = PdxMaterial()
 
                 for o in sub_objects:
-                    print("ERROR ::: Material contains invalid Sub-Object: " + str(type(o)))
+                    utils.Log.info("ERROR ::: Material contains invalid Sub-Object: " + str(type(o)))
 
                 for p in object_properties:
                     if p.name == "shader":
@@ -229,7 +227,7 @@ class PdxFile():
                     elif p.name == "spec":
                         result.spec = p.value
                     else:
-                        print("ERROR ::: Invalid Property in Material: \"" + p.name + "\"")
+                        utils.Log.info("ERROR ::: Invalid Property in Material: \"" + p.name + "\"")
             elif object_name == "skeleton":
                 result = PdxSkeleton()
 
@@ -237,10 +235,10 @@ class PdxFile():
                     if isinstance(o, PdxJoint):
                         result.joints.append(o)
                     else:
-                        print("ERROR ::: Skeleton contains invalid Sub-Object: " + str(type(o)))
+                        utils.Log.info("ERROR ::: Skeleton contains invalid Sub-Object: " + str(type(o)))
 
                 for p in object_properties:
-                    print("ERROR ::: Invalid Property in Skeleton: \"" + p.name + "\"")
+                    utils.Log.info("ERROR ::: Invalid Property in Skeleton: \"" + p.name + "\"")
             elif object_name == "locator":
                 result = PdxLocators()
 
@@ -248,10 +246,10 @@ class PdxFile():
                     if isinstance(o, PdxLocator):
                         result.locators.append(o)
                     else:
-                        print("ERROR ::: Locators contains invalid Sub-Object: " + str(type(o)))
+                        utils.Log.info("ERROR ::: Locators contains invalid Sub-Object: " + str(type(o)))
 
                 for p in object_properties:
-                    print("ERROR ::: Invalid Property in Locators: \"" + p.name + "\"")
+                    utils.Log.info("ERROR ::: Invalid Property in Locators: \"" + p.name + "\"")
             elif object_name == "info":
                 result = PdxAnimInfo()
 
@@ -259,31 +257,31 @@ class PdxFile():
                     if isinstance(o, PdxAnimJoint):
                         result.animJoints.append(o)
                     else:
-                        print("ERROR ::: AnimInfo contains invalid Sub-Object: " + str(type(o)))
+                        utils.Log.info("ERROR ::: AnimInfo contains invalid Sub-Object: " + str(type(o)))
 
                 for p in object_properties:
                     if p.name == "fps":
                         if len(p.value) == 1:
                             result.fps = p.value[0]
                         else:
-                            print("ERROR ::: fps has more than 1 Value")
+                            utils.Log.info("ERROR ::: fps has more than 1 Value")
                     elif p.name == "sa":
                         if len(p.value) == 1:
                             result.samples = p.value[0]
                         else:
-                            print("ERROR ::: samples has more than 1 Value")
+                            utils.Log.info("ERROR ::: samples has more than 1 Value")
                     elif p.name == "j":
                         if len(p.value) == 1:
                             result.jointCount = p.value[0]
                         else:
-                            print("ERROR ::: joints has more than 1 Value")
+                            utils.Log.info("ERROR ::: joints has more than 1 Value")
                     else:
-                        print("ERROR ::: Invalid Property in AnimInfo: \"" + p.name + "\"")
+                        utils.Log.info("ERROR ::: Invalid Property in AnimInfo: \"" + p.name + "\"")
             elif object_name == "samples":
                 result = PdxAnimSamples()
 
                 for o in sub_objects:
-                    print("ERROR ::: AnimSamples contains invalid Sub-Object: " + str(type(o)))
+                    utils.Log.info("ERROR ::: AnimSamples contains invalid Sub-Object: " + str(type(o)))
 
                 for p in object_properties:
                     if p.name == "t":
@@ -293,28 +291,28 @@ class PdxFile():
                     elif p.name == "s":
                         result.s = p.value
                     else:
-                        print("ERROR ::: Invalid Property in AnimSamples: \"" + p.name + "\"")
+                        utils.Log.info("ERROR ::: Invalid Property in AnimSamples: \"" + p.name + "\"")
             else:
                 if isinstance(prev_obj, PdxLocators):
                     result = PdxLocator(object_name, None)
                     for o in sub_objects:
-                        print("ERROR ::: Locator \"" + object_name + "\" contains invalid Sub-Object: " + str(type(o)))
+                        utils.Log.info("ERROR ::: Locator \"" + object_name + "\" contains invalid Sub-Object: " + str(type(o)))
 
                     for p in object_properties:
                         if p.name == "p":
                             if len(p.value) == 3:
                                 result.pos = p.value
                             else:
-                                print("ERROR ::: Locator Position does not have 3 Values")
+                                utils.Log.info("ERROR ::: Locator Position does not have 3 Values")
                         elif p.name == "q":
                             if len(p.value) == 4:
                                 result.quaternion = p.value
                             else:
-                                print("ERROR ::: Locator Quaternion does not have 4 Values")
+                                utils.Log.info("ERROR ::: Locator Quaternion does not have 4 Values")
                         elif p.name == "pa":
                             result.parent = p.value
                         else:
-                            print("ERROR ::: Invalid Property in Locator: \"" + p.name + "\"")
+                            utils.Log.info("ERROR ::: Invalid Property in Locator: \"" + p.name + "\"")
                 elif isinstance(prev_obj, PdxWorld):
                     result = PdxShape(object_name)
 
@@ -324,41 +322,42 @@ class PdxFile():
                         elif isinstance(o, PdxMesh):
                             result.meshes.append(o)
                         else:
-                            print("ERROR ::: Shape \"" + object_name + "\" contains invalid Sub-Object: " + str(type(o)))
+                            utils.Log.info("ERROR ::: Shape \"" + object_name + "\" contains invalid Sub-Object: " + str(type(o)))
 
                     for p in object_properties:
-                        print("ERROR ::: Invalid Property in Shape: \"" + p.name + "\"")
+                        utils.Log.info("ERROR ::: Invalid Property in Shape: \"" + p.name + "\"")
                 elif isinstance(prev_obj, PdxSkeleton):
                     result = PdxJoint(object_name)
 
                     for o in sub_objects:
-                        print("ERROR ::: Joint \"" + object_name + "\" contains invalid Sub-Object: " + str(type(o)))
+                        utils.Log.info("ERROR ::: Joint \"" + object_name + "\" contains invalid Sub-Object: " + str(type(o)))
 
                     for p in object_properties:
                         if p.name == "ix":
                             if len(p.value) == 1:
-                                #print("Joint Index: " + str(p.value[0]))
+                                #utils.Log.info("Joint Index: " + str(p.value[0]))
                                 result.index = p.value[0]
                             else:
-                                print("ERROR ::: Joint Index has more than 1 Value")
+                                utils.Log.info("ERROR ::: Joint Index has more than 1 Value")
                         elif p.name == "pa":
                             if len(p.value) == 1:
-                                #print("Parent Index: " + str(p.value[0]))
+                                #utils.Log.info("Parent Index: " + str(p.value[0]))
                                 result.parent = p.value[0]
                             else:
-                                print("ERROR ::: Parent Index has more than 1 Value")
+                                utils.Log.info("ERROR ::: Parent Index has more than 1 Value")
                         elif p.name == "tx":
                             if len(p.value) == 12:
                                 result.transform = p.value
+                                print(p.value[9:12])
                             else:
-                                print("ERROR ::: Joint Transform not 12 Values")
+                                utils.Log.info("ERROR ::: Joint Transform not 12 Values")
                         else:
-                            print("ERROR ::: Invalid Property in Joint: \"" + p.name + "\"")
+                            utils.Log.info("ERROR ::: Invalid Property in Joint: \"" + p.name + "\"")
                 elif isinstance(prev_obj, PdxAnimInfo):
                     result = PdxAnimJoint(object_name)
 
                     for o in sub_objects:
-                        print("ERROR ::: AnimJoint \"" + object_name + "\" contains invalid Sub-Object: " + str(type(o)))
+                        utils.Log.info("ERROR ::: AnimJoint \"" + object_name + "\" contains invalid Sub-Object: " + str(type(o)))
 
                     for p in object_properties:
                         if p.name == "sa":
@@ -367,19 +366,19 @@ class PdxFile():
                             if len(p.value) == 3:
                                 result.translation = p.value
                             else:
-                                print("ERROR ::: AnimJoint Translation has a length of " + str(len(p.value)))
+                                utils.Log.info("ERROR ::: AnimJoint Translation has a length of " + str(len(p.value)))
                         elif p.name == "q":
                             if len(p.value) == 4:
                                 result.quaternion = p.value
                             else:
-                                print("ERROR ::: AnimJoint Quaternion has a length of " + str(len(p.value)))
+                                utils.Log.info("ERROR ::: AnimJoint Quaternion has a length of " + str(len(p.value)))
                         elif p.name == "s":
                             if len(p.value) == 1:
                                 result.size = p.value[0]
                             else:
-                                print("ERROR ::: AnimJoint Size has a length of " + str(len(p.value)))
+                                utils.Log.info("ERROR ::: AnimJoint Size has a length of " + str(len(p.value)))
                         else:
-                            print("ERROR ::: Invalid Property in AnimJoint: \"" + p.name + "\"")
+                            utils.Log.info("ERROR ::: Invalid Property in AnimJoint: \"" + p.name + "\"")
                 else:
                     result = PdxObject(object_name, object_properties, depth)
 
@@ -402,6 +401,11 @@ class PdxAsset():
 
         return result
 
+    def get_gfx_data(self):
+        result = ""
+
+        return result
+
 class PdxWorld():
     def __init__(self):
         self.objects = []
@@ -415,6 +419,14 @@ class PdxWorld():
         for o in self.objects:
             result.extend(o.get_binary_data())
         
+        return result
+
+    def get_gfx_data(self):
+        result = ""
+
+        for o in self.objects:
+            result += o.get_gfx_data()
+
         return result
 
 class PdxShape():
@@ -433,10 +445,20 @@ class PdxShape():
             for mesh in self.meshes:
                 result.extend(mesh.get_binary_data())
         else:
-            print("ERROR ::: No Mesh found!")
+            utils.Log.info("ERROR ::: No Mesh found!")
 
         if not(self.skeleton is None):
             result.extend(self.skeleton.get_binary_data())
+
+        return result
+
+
+    def get_gfx_data(self):
+        result = ""
+
+        if self.meshes is not None:
+            for i in range(len(self.meshes)):
+                result += self.meshes[i].get_gfx_data(self.name, i)
 
         return result
 
@@ -451,6 +473,11 @@ class PdxSkeleton():
 
         for joint in self.joints:
             result.extend(joint.get_binary_data())
+
+        return result
+
+    def get_gfx_data(self):
+        result = ""
 
         return result
 
@@ -479,6 +506,10 @@ class PdxJoint():
 
         return result
 
+    def get_gfx_data(self):
+        result = ""
+
+        return result
 
 class PdxMesh():
     def __init__(self):
@@ -506,7 +537,7 @@ class PdxMesh():
                 for j in range(3):
                     result.extend(struct.pack("<f", self.verts[i][j]))
         else:
-            print("ERROR ::: No Vertices found!")
+            utils.Log.info("ERROR ::: No Vertices found!")
 
         if len(self.faces) > 0:
             result.extend(struct.pack("<cb4sI", b'!', 3, b'trii', len(self.faces) * 3))
@@ -515,7 +546,7 @@ class PdxMesh():
                 for j in range(3):
                     result.extend(struct.pack("<I", self.faces[i][j]))
         else:
-            print("ERROR ::: No Faces found!")
+            utils.Log.info("ERROR ::: No Faces found!")
 
         if len(self.normals) > 0:
             result.extend(struct.pack("<cb2sI", b'!', 1, b'nf', len(self.normals) * 3))
@@ -524,7 +555,7 @@ class PdxMesh():
                 for j in range(3):
                     result.extend(struct.pack("<f", self.normals[i][j]))
         else:
-            print("WARNING ::: No Normals found! (Ok for Collision Material)")
+            utils.Log.info("WARNING ::: No Normals found! (Ok for Collision Material)")
 
         if len(self.tangents) > 0:
             result.extend(struct.pack("<cb3sI", b'!', 2, b'taf', len(self.tangents) * 4))
@@ -533,7 +564,7 @@ class PdxMesh():
                 for j in range(4):
                     result.extend(struct.pack("<f", self.tangents[i][j]))
         else:
-            print("WARNING ::: No Tangents found! (Ok for Collision Material)")
+            utils.Log.info("WARNING ::: No Tangents found! (Ok for Collision Material)")
 
         if len(self.uv_coords) > 0:
             result.extend(struct.pack("<cb3sI", b'!', 2, b'u0f', len(self.uv_coords) * 2))
@@ -542,22 +573,36 @@ class PdxMesh():
                 for j in range(2):
                     result.extend(struct.pack("<f", self.uv_coords[i][j]))
         else:
-            print("WARNING ::: No UV0 found! (Ok for Collision Material)")
+            utils.Log.info("WARNING ::: No UV0 found! (Ok for Collision Material)")
 
         if self.meshBounds is not None:
             result.extend(self.meshBounds.get_binary_data())
         else:
-            print("ERROR ::: No Mesh Bounds found!")
+            utils.Log.info("ERROR ::: No Mesh Bounds found!")
 
         if self.material is not None:
             result.extend(self.material.get_binary_data())
         else:
-            print("ERROR ::: No Material found!")
+            utils.Log.info("ERROR ::: No Material found!")
 
         if self.skin is not None:
             result.extend(self.skin.get_binary_data())
         else:
-            print("WARNING ::: No Skin found!")
+            utils.Log.info("WARNING ::: No Skin found!")
+
+        return result
+
+    def get_gfx_data(self, name, index):
+        result = "\n"
+
+        result += "        meshsettings = {\n"
+
+        result += "            name = \"" + name + "\"\n"
+        result += "            index = " + str(index) + "\n"
+
+        result += self.material.get_gfx_data()
+
+        result += "        }\n"
 
         return result
 
@@ -596,6 +641,16 @@ class PdxMaterial():
 
         return result
 
+    def get_gfx_data(self):
+        result = ""
+
+        result += "            texture_diffuse = \"" + self.diff + "\"\n"
+        result += "            texture_normal = \"" + self.normal + "\"\n"
+        result += "            texture_specular = \"" + self.spec + "\"\n"
+        result += "            shader = \"" + self.shader + "\"\n"
+
+        return result
+
 class PdxBounds():
     def __init__(self, min, max):
         self.min = min
@@ -611,6 +666,11 @@ class PdxBounds():
         result.extend(struct.pack("<Ifff", 3, self.min[0], self.min[1], self.min[2]))
         result.extend(struct.pack("<cb4s", b'!', 3, b'maxf'))
         result.extend(struct.pack("<Ifff", 3, self.max[0], self.max[1], self.max[2]))
+
+        return result
+
+    def get_gfx_data(self):
+        result = ""
 
         return result
 
@@ -635,6 +695,11 @@ class PdxSkin():
 
         return result
 
+    def get_gfx_data(self):
+        result = ""
+
+        return result
+
 class PdxLocators():
     def __init__(self):
         self.bounds = (0, 0)
@@ -648,6 +713,11 @@ class PdxLocators():
 
         for locator in self.locators:
             result.extend(locator.get_binary_data())
+
+        return result
+
+    def get_gfx_data(self):
+        result = ""
 
         return result
 
@@ -675,6 +745,11 @@ class PdxLocator():
 
         return result
 
+    def get_gfx_data(self):
+        result = ""
+
+        return result
+
 # Pdx Anim File
 class PdxAnimInfo():
     def __init__(self):
@@ -695,6 +770,11 @@ class PdxAnimInfo():
 
         for animJoint in self.animJoints:
             result.extend(animJoint.get_binary_data())
+
+        return result
+
+    def get_gfx_data(self):
+        result = ""
 
         return result
 
@@ -722,7 +802,7 @@ class PdxAnimJoint():
             for t in self.translation:
                 result.extend(struct.pack("<f", t))
         else:
-            print("ERROR ::: AnimJoint Translation has invalid size")
+            utils.Log.info("ERROR ::: AnimJoint Translation has invalid size")
 
         if len(self.quaternion) == 4:
             result.extend(struct.pack("<cb2sI", b'!', 1, b'qf', 4))
@@ -730,9 +810,14 @@ class PdxAnimJoint():
             for q in self.quaternion:
                 result.extend(struct.pack("<f", q))
         else:
-            print("ERROR ::: AnimJoint Quaternion has invalid size")
+            utils.Log.info("ERROR ::: AnimJoint Quaternion has invalid size")
 
         result.extend(struct.pack("<cb2sII", b'!', 1, b'si', 1, self.size))
+
+        return result
+
+    def get_gfx_data(self):
+        result = ""
 
         return result
 
@@ -753,7 +838,7 @@ class PdxAnimSamples:
             for t in self.t:
                 result.extend(struct.pack("<f", t))
         else:
-            print("ERROR ::: T-Samples are not multiples of 3")
+            utils.Log.info("ERROR ::: T-Samples are not multiples of 3")
 
         if len(self.q) % 4 == 0:
             result.extend(struct.pack("<cb2sI", b'!', 1, b'tf', len(self.q)))
@@ -761,7 +846,7 @@ class PdxAnimSamples:
             for q in self.q:
                 result.extend(struct.pack("<f", q))
         else:
-            print("ERROR ::: Q-Samples are not multiples of 4")
+            utils.Log.info("ERROR ::: Q-Samples are not multiples of 4")
 
         if len(self.s) % 1 == 0:
             result.extend(struct.pack("<cb2sI", b'!', 1, b'tf', len(self.s)))
@@ -769,7 +854,12 @@ class PdxAnimSamples:
             for s in self.s:
                 result.extend(struct.pack("<f", s))
         else:
-            print("ERROR ::: S-Samples are not multiples of 1")
+            utils.Log.info("ERROR ::: S-Samples are not multiples of 1")
+
+        return result
+
+    def get_gfx_data(self):
+        result = ""
 
         return result
 
@@ -784,6 +874,11 @@ class PdxObject():
     def get_binary_data(self):
         return bytearray()
 
+    def get_gfx_data(self):
+        result = ""
+
+        return result
+
 class PdxProperty():
     """Temporary class to hold the Values of a parsed Property until it gets mapped to the object"""
     def __init__(self, name, bounds):
@@ -793,3 +888,8 @@ class PdxProperty():
 
     def get_binary_data(self):
         return bytearray()
+
+    def get_gfx_data(self):
+        result = ""
+
+        return result
